@@ -1,0 +1,32 @@
+agent:
+  name: "Observatoire Transformation"
+  version: "1.0.0"
+  default_sector: "pharmaceutique"
+
+collection:
+  days_back: 35           # Jours en arrière pour la collecte RSS
+  max_search_results: 8   # Résultats max par requête DuckDuckGo
+  max_articles_total: 60  # Articles max envoyés à l'analyse
+
+analysis:
+  model: "claude-sonnet-4-6"
+  max_tokens: 8192
+  temperature: 0.3        # Bas pour analyses factuelles
+
+reporting:
+  formats:                # Formats activés : docx, html, pdf
+    - docx
+    - html
+  output_dir: "reports"
+  filename_pattern: "veille_{sector}_{date}"  # {sector} et {date} remplacés auto
+
+scheduling:
+  enabled: true
+  frequency: "monthly"   # monthly | weekly
+  day_of_month: 1        # Jour du mois (1 = 1er du mois)
+  hour: 8                # Heure d'exécution (format 24h)
+  minute: 0
+
+logging:
+  level: "INFO"
+  file: "reports/agent.log"

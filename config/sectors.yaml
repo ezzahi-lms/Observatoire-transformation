@@ -1,0 +1,161 @@
+sectors:
+  pharmaceutique:
+    label: "Industrie Pharmaceutique"
+    language: "fr"
+    search_queries:
+      - "transformation organisationnelle industrie pharmaceutique 2025"
+      - "pharmaceutical industry digital transformation trends 2025"
+      - "pharma operating model restructuring innovation"
+      - "industrie pharma transformation RH compétences 2025"
+      - "biopharma digital AI drug discovery organizational change"
+      - "pharmaceutical sector supply chain transformation"
+      - "pharma workforce agile transformation 2025"
+      - "industrie pharmaceutique ESG transformation durable"
+    rss_feeds:
+      - url: "https://www.pharmaceutical-technology.com/feed/"
+        name: "Pharmaceutical Technology"
+      - url: "https://www.fiercepharma.com/rss/xml"
+        name: "FiercePharma"
+      - url: "https://www.drugdiscoverytoday.com/rss/news"
+        name: "Drug Discovery Today"
+      - url: "https://www.europharma.fr/feed"
+        name: "EuroPharma"
+      - url: "https://www.leem.org/rss.xml"
+        name: "LEEM"
+      - url: "https://www.who.int/rss-feeds/news-english.xml"
+        name: "WHO News"
+    focus_areas:
+      - "Transformation digitale et IA"
+      - "Modèles opérationnels R&D"
+      - "Transformation des ressources humaines"
+      - "Supply chain et opérations"
+      - "Stratégies M&A et partenariats"
+      - "Réglementation et conformité"
+      - "Durabilité et ESG"
+
+  pharma_maroc:
+    label: "Industrie Pharmaceutique — Maroc"
+    language: "fr"
+    search_queries:
+      # Transformation organisationnelle et modèles opérationnels
+      - "transformation organisationnelle industrie pharmaceutique Maroc 2025"
+      - "modèle opérationnel entreprises pharma Maroc restructuration"
+      - "organisation agile industrie pharmaceutique Maroc"
+      # Transformation RH, compétences, culture
+      - "transformation ressources humaines pharma Maroc compétences 2025"
+      - "gestion talents industrie pharmaceutique Maroc formation"
+      - "culture d'entreprise transformation pharma Maroc leadership"
+      # Digitalisation des organisations
+      - "digitalisation transformation numérique organisations pharma Maroc"
+      - "digital transformation pharmaceutical companies Morocco operating model"
+      # Gouvernance, stratégie, M&A
+      - "stratégie croissance restructuration entreprises pharmaceutiques Maroc"
+      - "partenariats alliances pharma Maroc Afrique gouvernance"
+    rss_feeds:
+      - url: "https://www.pharmaceutical-technology.com/feed/"
+        name: "Pharmaceutical Technology"
+      - url: "https://www.fiercepharma.com/rss/xml"
+        name: "FiercePharma"
+      - url: "https://www.agenceecofin.com/rss/sante"
+        name: "Agence Ecofin Santé (Afrique)"
+      - url: "https://www.lematin.ma/rss/economie"
+        name: "Le Matin Maroc — Economie"
+      - url: "https://www.leconomiste.com/rss.xml"
+        name: "L'Economiste Maroc"
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+    focus_areas:
+      - "Évolution des modèles opérationnels et structures organisationnelles"
+      - "Transformation RH : compétences, recrutement, rétention des talents"
+      - "Culture d'entreprise, leadership et conduite du changement"
+      - "Digitalisation des processus internes et des opérations"
+      - "Gouvernance, stratégies de croissance et alliances"
+      - "Internationalisation et expansion vers l'Afrique (ZLECAf)"
+      - "Conformité réglementaire comme levier de transformation (AMIP)"
+      - "Chaîne de valeur : reorganisation production, supply chain, distribution"
+    context_note: >
+      Le Maroc est le 2e producteur pharmaceutique d'Afrique (~600 entreprises, ~40 000 emplois directes).
+      Les acteurs locaux majeurs : Sothema, Cooper Pharma, Laprophan, Pharma 5, Maphar (génériques),
+      Galenica, Bottu. Le secteur est en pleine mutation organisationnelle vers la production à valeur
+      ajoutée (biotechs, biosimilaires), la digitalisation des opérations et la professionnalisation
+      des fonctions RH/management pour attirer des profils qualifiés.
+      Régulateur : AMIP (ex-DMP). Plan de Santé 2025. Ambition : couvrir 70% des besoins nationaux
+      et devenir hub export africain via la ZLECAf. Multinationales présentes : Sanofi, Roche, Pfizer,
+      AstraZeneca (bureaux locaux, parfois production).
+      FOCUS BENCHMARK : Analyser uniquement les TRANSFORMATIONS ORGANISATIONNELLES
+      (structures, modèles opérationnels, RH, culture, gouvernance, digitalisation des organisations).
+
+    benchmark_axes:
+      # Facteurs Clés de Succès — tous niveaux
+      - "FCS Stratégique : vision d'internationalisation, positionnement sur la chaîne de valeur (générique vs innovant vs biosimilaire), stratégie de croissance en Afrique"
+      - "FCS Organisationnel : agilité organisationnelle, structure adaptée à la croissance export, capacité d'intégration de partenariats"
+      - "FCS Opérationnel : excellence opérationnelle (conformité BPF/GMP), gestion de la qualité, efficience de la supply chain"
+      - "FCS Technologique : maturité digitale (ERP, MES, QMS), adoption de l'IA dans les processus, cybersécurité"
+      - "FCS Humain/RH : attraction et rétention des talents qualifiés (pharmaciens, ingénieurs, data scientists), leadership et management interculturel"
+      # Dimensionnement
+      - "Tendances de dimensionnement des effectifs (croissance vs optimisation), évolution des fonctions (montée en puissance des fonctions support, RH, digital), ratio encadrement"
+      # Gouvernance
+      - "Pratiques de gouvernance : structures de direction, rôle des actionnaires (familiaux vs institutionnels), conformité AMIP/réglementaire, reporting ESG, gouvernance des filiales export"
+      # Gestion de la performance
+      - "Gestion de la performance : KPIs sectoriels (qualité, délais, conformité), systèmes d'évaluation et d'incentive, management par objectifs, culture de la performance"
+      # Externalisation
+      - "Externalisation et partenariats : sous-traitance industrielle, accords de licence, co-promotion, make-or-buy sur les fonctions support (IT, logistique, formation)"
+      # RSE & Éthique
+      - "RSE et éthique : accès aux médicaments essentiels, impact environnemental de la production, politique diversité & inclusion, éthique des essais cliniques locaux, reporting RSE"
+
+  banque_finance:
+    label: "Banque & Finance"
+    language: "fr"
+    search_queries:
+      - "transformation organisationnelle banque finance 2025"
+      - "banking digital transformation trends 2025"
+      - "fintech disruption banque modèle opérationnel"
+      - "banque agile transformation culturelle 2025"
+      - "financial services AI automation workforce"
+    rss_feeds:
+      - url: "https://www.lesechos.fr/finance-marches/rss-finance.xml"
+        name: "Les Echos Finance"
+      - url: "https://www.finews.net/rss"
+        name: "Finews"
+    focus_areas:
+      - "Transformation digitale et open banking"
+      - "Gestion des talents et nouvelles compétences"
+      - "Réglementation et conformité"
+      - "Fintechs et nouveaux entrants"
+      - "Durabilité et finance verte"
+
+  sante:
+    label: "Santé & Hôpital"
+    language: "fr"
+    search_queries:
+      - "transformation organisationnelle hôpital santé 2025"
+      - "healthcare digital transformation hospital 2025"
+      - "transformation système de santé France 2025"
+      - "e-santé télémédecine transformation organisationnelle"
+    rss_feeds:
+      - url: "https://www.hospimedia.fr/rss"
+        name: "Hospimedia"
+      - url: "https://www.who.int/rss-feeds/news-french.xml"
+        name: "OMS News"
+    focus_areas:
+      - "Numérique en santé"
+      - "Restructuration hospitalière"
+      - "Ressources humaines soignantes"
+      - "Partenariats public-privé"
+
+  industrie:
+    label: "Industrie & Manufacture"
+    language: "fr"
+    search_queries:
+      - "transformation organisationnelle industrie manufacture 2025"
+      - "industrie 4.0 transformation digitale 2025"
+      - "manufacturing organizational transformation smart factory"
+      - "industrie robotisation transformation emploi 2025"
+    rss_feeds:
+      - url: "https://www.usinenouvelle.com/rss/toutes-les-actualites.rss"
+        name: "L'Usine Nouvelle"
+    focus_areas:
+      - "Industrie 4.0 et automatisation"
+      - "Transformation des compétences"
+      - "Supply chain résilience"
+      - "Transition énergétique"

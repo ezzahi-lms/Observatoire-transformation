@@ -1,0 +1,36 @@
+# ── Secrets & configuration locale ──────────────────────────────────────────
+.env
+config/users.yaml
+
+# ── Rapports générés (trop lourds pour git) ───────────────────────────────────
+reports/
+*.docx
+*.pdf
+*.html
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+streamlit_startup*.log
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ── Streamlit cache ───────────────────────────────────────────────────────────
+.streamlit/
+
+# ── Claude (fichiers locaux de l'IDE) ────────────────────────────────────────
+.claude/
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

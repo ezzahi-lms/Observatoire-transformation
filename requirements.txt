@@ -1,0 +1,25 @@
+# API Anthropic
+anthropic>=0.40.0
+
+# Collecte des données
+ddgs>=1.0.0
+feedparser>=6.0.11
+requests>=2.32.0
+
+# Génération des rapports
+python-docx>=1.1.2
+jinja2>=3.1.4
+
+# Interface graphique
+streamlit>=1.28.0
+streamlit-authenticator>=0.4.0
+
+# Scheduler
+apscheduler>=3.10.4
+
+# Config & environnement
+python-dotenv>=1.0.1
+pyyaml>=6.0.2
+
+# PDF (optionnel — décommenter si souhaité)
+# weasyprint>=62.0
