@@ -296,6 +296,57 @@ def _format_articles(articles: List[Dict]) -> str:
     return "\n".join(lines)
 
 
+def _collect_cited_ids(data) -> set:
+    """Parcourt récursivement le résultat et collecte tous les IDs de sources cités."""
+    ids = set()
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k == "sources" and isinstance(v, list):
+                for s in v:
+                    if isinstance(s, int):
+                        ids.add(s)
+            else:
+                ids |= _collect_cited_ids(v)
+    elif isinstance(data, list):
+        for item in data:
+            ids |= _collect_cited_ids(item)
+    return ids
+
+
+def _build_fallback_index(articles: List[Dict], result: Dict) -> List[Dict]:
+    """
+    Reconstruit l'index_sources depuis les articles collectés en se basant
+    sur les IDs cités dans le résultat (champs `sources: [N, ...]`).
+    Si aucun ID n'est trouvé, inclut tous les articles.
+    """
+    cited_ids = _collect_cited_ids(result)
+
+    # Si Claude n'a cité aucun ID via les champs sources, inclure tous les articles
+    if not cited_ids:
+        cited_ids = set(range(1, len(articles) + 1))
+
+    index = []
+    for idx in sorted(cited_ids):
+        if 1 <= idx <= len(articles):
+            a = articles[idx - 1]
+            date_val = a.get("date", "")
+            # Normaliser la date
+            if date_val and date_val != "N/A":
+                try:
+                    date_val = datetime.fromisoformat(date_val).strftime("%Y-%m-%d")
+                except Exception:
+                    pass
+            index.append({
+                "id": idx,
+                "titre": a.get("title", "Sans titre")[:120],
+                "source": a.get("source", ""),
+                "url": a.get("url", ""),
+                "date": date_val or "N/A",
+                "pertinence": "Directe" if a.get("type") == "rss" else "Contextuelle",
+            })
+    return index
+
+
 def _call_claude(client, model, max_tokens, system_cached, tool, tool_name, user_prompt):
     resp = client.messages.create(
         model=model,
@@ -352,11 +403,27 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
     part_a = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_A, "benchmark_part_a", prompt_a)
 
     logger.info("Appel Claude Part B (externalisation, RSE, signaux, prospective, recommandations)...")
-    prompt_b = base_prompt + "\n\nUtilise `benchmark_part_b` pour les sections : externalisation & partenariats, RSE & éthique, signaux faibles, analyse prospective avec 3 scénarios, recommandations stratégiques (5-8), et index complet des sources citées."
+    prompt_b = (
+        base_prompt
+        + "\n\nUtilise `benchmark_part_b` pour les sections : externalisation & partenariats, "
+        "RSE & éthique, signaux faibles, analyse prospective avec 3 scénarios, "
+        "recommandations stratégiques (5-8).\n\n"
+        "⚠️ OBLIGATOIRE — `index_sources` : liste TOUTES les sources citées via [N] dans "
+        "l'ENSEMBLE du benchmark (Part A + Part B). Pour chaque source citée, inclure id=N, "
+        "titre, source, url, date, pertinence. Un index vide ou incomplet rend le rapport "
+        "inexploitable pour les décideurs."
+    )
     part_b = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_B, "benchmark_part_b", prompt_b)
 
     # Fusion
     result = {**part_a, **part_b}
+
+    # ── Reconstruction de l'index si Claude ne l'a pas rempli ─────────────────
+    if not result.get("index_sources"):
+        logger.warning("index_sources vide — reconstruction automatique depuis les articles collectés.")
+        result["index_sources"] = _build_fallback_index(articles, result)
+        logger.info(f"Index reconstruit : {len(result['index_sources'])} sources.")
+
     result["_meta"] = {
         "model": model, "sector": sector_label, "period": period,
         "generated_at": datetime.now().isoformat(),

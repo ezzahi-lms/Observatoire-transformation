@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 _env_path = ROOT / ".env"
 if _env_path.exists():
     for _k, _v in dotenv_values(_env_path, encoding="utf-8").items():
-        if _v is not None and _k not in os.environ:
+        if _v and not os.environ.get(_k):   # écrase aussi les valeurs vides
             os.environ[_k] = _v
 
 # ── Configuration de la page ──────────────────────────────────────────────────

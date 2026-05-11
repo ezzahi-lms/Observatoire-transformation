@@ -370,6 +370,8 @@ def generate_pdf(html_path: str, output_path: str) -> str | None:
 # ─────────────────────────────────────────
 
 def generate_reports(analysis: Dict[str, Any], settings: Dict, project_root: str) -> List[str]:
+    import json
+
     formats = settings.get("reporting", {}).get("formats", ["docx", "html"])
     output_dir = Path(project_root) / settings.get("reporting", {}).get("output_dir", "reports")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -390,6 +392,12 @@ def generate_reports(analysis: Dict[str, Any], settings: Dict, project_root: str
 
     template_path = str(Path(project_root) / "templates" / "report.html")
     generated = []
+
+    # ── Sauvegarde JSON (permet de régénérer les rapports sans rappeler Claude) ──
+    json_path = output_dir / f"{base_name}.json"
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(analysis, f, ensure_ascii=False, indent=2)
+    logger.info(f"Données JSON sauvegardées : {json_path}")
 
     if "html" in formats or "pdf" in formats:
         html_path = str(output_dir / f"{base_name}.html")

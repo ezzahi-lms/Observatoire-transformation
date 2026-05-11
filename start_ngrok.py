@@ -15,7 +15,7 @@ ROOT = Path(__file__).parent
 # ── Chargement du .env ────────────────────────────────────────────────────────
 env = dotenv_values(ROOT / ".env", encoding="utf-8")
 for k, v in env.items():
-    if v and k not in os.environ:
+    if v and not os.environ.get(k):   # écrase aussi les valeurs vides
         os.environ[k] = v
 
 NGROK_TOKEN = os.environ.get("NGROK_AUTHTOKEN", "")
