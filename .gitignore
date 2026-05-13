@@ -7,6 +7,8 @@ reports/
 *.docx
 *.pdf
 *.html
+# Exception : le template HTML (pas un rapport généré)
+!templates/*.html
 
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log

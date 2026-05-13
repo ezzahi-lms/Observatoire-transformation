@@ -1,161 +1,423 @@
-sectors:
-  pharmaceutique:
-    label: "Industrie Pharmaceutique"
-    language: "fr"
-    search_queries:
-      - "transformation organisationnelle industrie pharmaceutique 2025"
-      - "pharmaceutical industry digital transformation trends 2025"
-      - "pharma operating model restructuring innovation"
-      - "industrie pharma transformation RH compétences 2025"
-      - "biopharma digital AI drug discovery organizational change"
-      - "pharmaceutical sector supply chain transformation"
-      - "pharma workforce agile transformation 2025"
-      - "industrie pharmaceutique ESG transformation durable"
-    rss_feeds:
-      - url: "https://www.pharmaceutical-technology.com/feed/"
-        name: "Pharmaceutical Technology"
-      - url: "https://www.fiercepharma.com/rss/xml"
-        name: "FiercePharma"
-      - url: "https://www.drugdiscoverytoday.com/rss/news"
-        name: "Drug Discovery Today"
-      - url: "https://www.europharma.fr/feed"
-        name: "EuroPharma"
-      - url: "https://www.leem.org/rss.xml"
-        name: "LEEM"
-      - url: "https://www.who.int/rss-feeds/news-english.xml"
-        name: "WHO News"
-    focus_areas:
-      - "Transformation digitale et IA"
-      - "Modèles opérationnels R&D"
-      - "Transformation des ressources humaines"
-      - "Supply chain et opérations"
-      - "Stratégies M&A et partenariats"
-      - "Réglementation et conformité"
-      - "Durabilité et ESG"
+# ──────────────────────────────────────────────────────────────────────────────
+#  Secteurs — Observatoire de la Transformation Organisationnelle — LMS ORH
+#
+#  Structure par secteur :
+#    label           : Nom affiché dans les rapports
+#    language        : fr | en | ar
+#    search_queries  : Requêtes DuckDuckGo (collecte web)
+#    rss_feeds       : Flux RSS (collecte presse)
+#    benchmark_axes  : Axes prioritaires transmis à Claude (méthode 4P)
+#    context_note    : Contexte sectoriel + périmètre + focus missions conseil
+#
+#  Méthode 4P : chaque analyse produit Persona / Process / Périmètre / Produit
+#  3 lectures "So what?" : Secteur → Clients → Cabinet (LMS ORH)
+#  Dimension Afrique/MENA : systématiquement intégrée
+# ──────────────────────────────────────────────────────────────────────────────
 
+sectors:
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  PHARMA MAROC — Secteur pilote
+  # ════════════════════════════════════════════════════════════════════════════
   pharma_maroc:
-    label: "Industrie Pharmaceutique — Maroc"
+    label: "Industrie Pharmaceutique — Maroc & Afrique"
     language: "fr"
+
     search_queries:
-      # Transformation organisationnelle et modèles opérationnels
+      # Transformation organisationnelle & modèles opérationnels
       - "transformation organisationnelle industrie pharmaceutique Maroc 2025"
-      - "modèle opérationnel entreprises pharma Maroc restructuration"
-      - "organisation agile industrie pharmaceutique Maroc"
-      # Transformation RH, compétences, culture
-      - "transformation ressources humaines pharma Maroc compétences 2025"
-      - "gestion talents industrie pharmaceutique Maroc formation"
-      - "culture d'entreprise transformation pharma Maroc leadership"
-      # Digitalisation des organisations
+      - "modèle opérationnel restructuration entreprises pharma Maroc Afrique"
+      - "organisation agile industrie pharmaceutique Maroc hub africain"
+      # RH, compétences, talents
+      - "transformation ressources humaines pharma Maroc compétences talents 2025"
+      - "gestion talents industrie pharmaceutique Maroc Afrique formation"
+      # Digitalisation
       - "digitalisation transformation numérique organisations pharma Maroc"
-      - "digital transformation pharmaceutical companies Morocco operating model"
-      # Gouvernance, stratégie, M&A
-      - "stratégie croissance restructuration entreprises pharmaceutiques Maroc"
-      - "partenariats alliances pharma Maroc Afrique gouvernance"
+      - "digital transformation pharmaceutical Morocco operating model AI"
+      # Gouvernance & stratégie
+      - "gouvernance stratégie croissance restructuration pharma Maroc"
+      - "partenariats alliances pharma Maroc Afrique subsaharienne ZLECAf"
+      # Ouverture africaine / MENA
+      - "pharmaceutical industry Africa transformation organisationnelle hub Morocco"
+      - "industrie pharmaceutique Afrique subsaharienne transformation organisation 2025"
+      - "pharmaceutical Morocco Africa MENA benchmark organisationnel"
+      # Réglementation comme levier d'organisation
+      - "conformité réglementaire AMIP DMP transformation organisation pharma Maroc"
+      - "pharmaceutical regulation Morocco organizational compliance transformation"
+      # Dimensionnement & externalisation
+      - "dimensionnement effectifs pharma Maroc externalisation sous-traitance"
+      - "make or buy pharmaceutical Morocco outsourcing organizational"
+
     rss_feeds:
       - url: "https://www.pharmaceutical-technology.com/feed/"
         name: "Pharmaceutical Technology"
       - url: "https://www.fiercepharma.com/rss/xml"
         name: "FiercePharma"
-      - url: "https://www.agenceecofin.com/rss/sante"
-        name: "Agence Ecofin Santé (Afrique)"
-      - url: "https://www.lematin.ma/rss/economie"
-        name: "Le Matin Maroc — Economie"
-      - url: "https://www.leconomiste.com/rss.xml"
-        name: "L'Economiste Maroc"
       - url: "https://medias24.com/rss"
         name: "Medias24 Maroc"
-    focus_areas:
-      - "Évolution des modèles opérationnels et structures organisationnelles"
-      - "Transformation RH : compétences, recrutement, rétention des talents"
-      - "Culture d'entreprise, leadership et conduite du changement"
-      - "Digitalisation des processus internes et des opérations"
-      - "Gouvernance, stratégies de croissance et alliances"
-      - "Internationalisation et expansion vers l'Afrique (ZLECAf)"
-      - "Conformité réglementaire comme levier de transformation (AMIP)"
-      - "Chaîne de valeur : reorganisation production, supply chain, distribution"
+      - url: "https://www.agenceecofin.com/rss/sante"
+        name: "Agence Ecofin — Santé Afrique"
+      - url: "https://www.lematin.ma/rss/economie"
+        name: "Le Matin Maroc — Économie"
+      - url: "https://www.leconomiste.com/rss.xml"
+        name: "L'Économiste Maroc"
+      - url: "https://www.who.int/rss-feeds/news-french.xml"
+        name: "OMS — Actualités Afrique/Monde"
+      - url: "https://www.drugdiscoverytoday.com/rss/news"
+        name: "Drug Discovery Today"
+
     context_note: >
-      Le Maroc est le 2e producteur pharmaceutique d'Afrique (~600 entreprises, ~40 000 emplois directes).
-      Les acteurs locaux majeurs : Sothema, Cooper Pharma, Laprophan, Pharma 5, Maphar (génériques),
-      Galenica, Bottu. Le secteur est en pleine mutation organisationnelle vers la production à valeur
-      ajoutée (biotechs, biosimilaires), la digitalisation des opérations et la professionnalisation
-      des fonctions RH/management pour attirer des profils qualifiés.
-      Régulateur : AMIP (ex-DMP). Plan de Santé 2025. Ambition : couvrir 70% des besoins nationaux
-      et devenir hub export africain via la ZLECAf. Multinationales présentes : Sanofi, Roche, Pfizer,
-      AstraZeneca (bureaux locaux, parfois production).
-      FOCUS BENCHMARK : Analyser uniquement les TRANSFORMATIONS ORGANISATIONNELLES
+      Le Maroc est le 2e producteur pharmaceutique d'Afrique (~600 entreprises, ~40 000 emplois directs).
+      Acteurs locaux majeurs : Sothema, Cooper Pharma, Laprophan, Pharma 5, Maphar, Galenica, Bottu.
+      Multinationales présentes : Sanofi, Roche, Pfizer, AstraZeneca (bureaux locaux + parfois production).
+      Régulateur : AMIP (ex-DMP). Plan de Santé 2025. Ambition nationale : couvrir 70 % des besoins
+      nationaux, devenir hub export africain via la ZLECAf, monter en gamme vers biosimilaires/biotech
+      (projet Marbio, horizon 2030). Contexte africain : marché continental estimé à 50 Md$, retraits
+      progressifs de multinationales qui laissent un espace organisationnel aux industriels marocains.
+      Questions-clés des clients LMS ORH : comment dimensionner les équipes pour l'export Afrique ?
+      Quelle gouvernance pour les filiales africaines ? Quelles fonctions internaliser vs externaliser ?
+      Quel SI pour piloter une organisation multi-pays ? Quelles compétences pour accompagner le
+      repositionnement biosimilaire/biotech ?
+      FOCUS BENCHMARK : Analyser UNIQUEMENT les TRANSFORMATIONS ORGANISATIONNELLES
       (structures, modèles opérationnels, RH, culture, gouvernance, digitalisation des organisations).
+      PAS les pipelines R&D, résultats cliniques, actualités boursières pures.
 
     benchmark_axes:
-      # Facteurs Clés de Succès — tous niveaux
-      - "FCS Stratégique : vision d'internationalisation, positionnement sur la chaîne de valeur (générique vs innovant vs biosimilaire), stratégie de croissance en Afrique"
-      - "FCS Organisationnel : agilité organisationnelle, structure adaptée à la croissance export, capacité d'intégration de partenariats"
-      - "FCS Opérationnel : excellence opérationnelle (conformité BPF/GMP), gestion de la qualité, efficience de la supply chain"
-      - "FCS Technologique : maturité digitale (ERP, MES, QMS), adoption de l'IA dans les processus, cybersécurité"
-      - "FCS Humain/RH : attraction et rétention des talents qualifiés (pharmaciens, ingénieurs, data scientists), leadership et management interculturel"
-      # Dimensionnement
-      - "Tendances de dimensionnement des effectifs (croissance vs optimisation), évolution des fonctions (montée en puissance des fonctions support, RH, digital), ratio encadrement"
-      # Gouvernance
-      - "Pratiques de gouvernance : structures de direction, rôle des actionnaires (familiaux vs institutionnels), conformité AMIP/réglementaire, reporting ESG, gouvernance des filiales export"
-      # Gestion de la performance
-      - "Gestion de la performance : KPIs sectoriels (qualité, délais, conformité), systèmes d'évaluation et d'incentive, management par objectifs, culture de la performance"
-      # Externalisation
-      - "Externalisation et partenariats : sous-traitance industrielle, accords de licence, co-promotion, make-or-buy sur les fonctions support (IT, logistique, formation)"
-      # RSE & Éthique
-      - "RSE et éthique : accès aux médicaments essentiels, impact environnemental de la production, politique diversité & inclusion, éthique des essais cliniques locaux, reporting RSE"
+      # ── FCS — tous niveaux (méthode 4P : périmètre organisationnel strict)
+      - "FCS Stratégique : vision hub africain, repositionnement chaîne de valeur (générique→biosimilaire/biotech), stratégie ZLECAf, alliances panafricaines"
+      - "FCS Organisationnel : agilité structurelle pour croissance export, intégration de partenariats, gouvernance filiales Afrique subsaharienne"
+      - "FCS Opérationnel : excellence BPF/GMP, efficience supply chain multi-pays, traçabilité et qualité à l'export africain"
+      - "FCS Technologique : maturité ERP/MES/QMS, adoption IA dans les processus, SI adapté au multi-pays, cybersécurité"
+      - "FCS Humain & RH : attraction/rétention talents qualifiés (pharmaciens, data scientists, managers africains), leadership interculturel, compétences bilingues FR/EN/AR"
+      # ── Questions structurantes clients LMS ORH
+      - "Dimensionnement : tendances effectifs (croissance vs optimisation), ratio encadrement, évolution des fonctions support (RH, Digital, Finance, Qualité), pyramide des âges"
+      - "Gouvernance : structures de direction (familiaux vs institutionnels), gouvernance filiales/JV africaines, rôle des Conseils d'Administration, conformité AMIP, reporting ESG, pilotage de la performance multi-entités"
+      - "Externalisation & Partenariats : make-or-buy fonctions support (IT, logistique, formation, comptabilité), sous-traitance industrielle, accords de licence, modèles d'alliance africains"
+      - "Systèmes d'Information : SI intégré pour pilotage multi-sites/multi-pays, digitalisation des processus RH (SIRH), traçabilité réglementaire, tableau de bord performance"
+      # ── Gestion de la performance
+      - "Gestion de la performance : KPIs sectoriels (qualité, conformité, export), systèmes d'évaluation et d'incentive adaptés au contexte africain, management par objectifs"
+      # ── Ouverture Afrique/MENA
+      - "Dimension Afrique & MENA : benchmarks organisationnels régionaux, best practices hubs pharma africains (Afrique du Sud, Égypte, Éthiopie), opportunités ZLECAf, risques pays"
+      # ── RSE & Éthique
+      - "RSE & Éthique : accès aux médicaments essentiels en Afrique, impact environnemental production, diversité & inclusion (parité, recrutement local Afrique), reporting RSE/ESG, éthique essais cliniques"
+      # ── Signaux réglementaires à enjeu organisationnel
+      - "Réglementation comme levier d'organisation : AMIP/DMP nouvelles exigences, normes EMA/WHO-GMP applicables à l'export, délais de mise en conformité organisationnelle"
 
+  # ════════════════════════════════════════════════════════════════════════════
+  #  BANQUE & FINANCE — Maroc & Afrique
+  # ════════════════════════════════════════════════════════════════════════════
   banque_finance:
-    label: "Banque & Finance"
+    label: "Banque & Finance — Maroc & Afrique"
     language: "fr"
+
     search_queries:
-      - "transformation organisationnelle banque finance 2025"
-      - "banking digital transformation trends 2025"
-      - "fintech disruption banque modèle opérationnel"
-      - "banque agile transformation culturelle 2025"
-      - "financial services AI automation workforce"
+      - "transformation organisationnelle banque finance Maroc 2025"
+      - "banking digital transformation Morocco Africa 2025"
+      - "fintech disruption banque Maroc modèle opérationnel"
+      - "banque agile transformation culturelle leadership Maroc"
+      - "financial services AI automation workforce Afrique MENA"
+      - "open banking Maroc Afrique transformation organisationnelle"
+      - "dimensionnement effectifs banque Maroc externalisation"
+      - "gouvernance banque Maroc Afrique filiales RSE"
+      - "transformation RH compétences numériques secteur bancaire Maroc"
+      - "Bank Al-Maghrib réglementation conformité transformation organisation"
+      - "banque panafricaine Attijariwafa CIH BMCE organisation Afrique"
+      - "externalisation outsourcing services bancaires Maroc Afrique"
+
     rss_feeds:
-      - url: "https://www.lesechos.fr/finance-marches/rss-finance.xml"
-        name: "Les Echos Finance"
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+      - url: "https://www.leconomiste.com/rss.xml"
+        name: "L'Économiste Maroc"
+      - url: "https://www.agenceecofin.com/rss/finances"
+        name: "Agence Ecofin — Finance Afrique"
+      - url: "https://www.lematin.ma/rss/economie"
+        name: "Le Matin Maroc — Économie"
       - url: "https://www.finews.net/rss"
-        name: "Finews"
-    focus_areas:
-      - "Transformation digitale et open banking"
-      - "Gestion des talents et nouvelles compétences"
-      - "Réglementation et conformité"
-      - "Fintechs et nouveaux entrants"
-      - "Durabilité et finance verte"
+        name: "Finews (international)"
 
+    context_note: >
+      Le secteur bancaire marocain est dominé par 5 groupes : Attijariwafa Bank, Banque Populaire,
+      BMCE Bank of Africa, CIH Bank, Société Générale Maroc. Ces groupes ont une forte empreinte
+      africaine (20-40 pays pour les leaders) qui génère des enjeux organisationnels spécifiques :
+      gouvernance multi-entités, harmonisation des SI, management interculturel, conformité multi-pays.
+      Régulateur : Bank Al-Maghrib (BAM). Pression réglementaire croissante : Bâle III/IV, lutte
+      anti-blanchiment, souveraineté des données. Transformation digitale accélérée post-Covid :
+      mobile banking, open banking, fintechs concurrentes. Enjeux RH : guerre des talents numériques,
+      reconversion des réseaux agences, nouvelles compétences data/cyber/compliance.
+      Questions-clés clients LMS ORH : comment gouverner un groupe bancaire panafricain ?
+      Quel modèle de centre de services partagés pour les fonctions support ? Comment dimensionner
+      les équipes risques/compliance dans un contexte réglementaire croissant ?
+      FOCUS : transformations organisationnelles uniquement (structures, RH, gouvernance, SI).
+
+    benchmark_axes:
+      - "FCS Stratégique : modèle bancaire panafricain, positionnement digital vs traditionnel, stratégie filiales Afrique subsaharienne, réponse aux fintechs"
+      - "FCS Organisationnel : structure matricielle groupe/filiales, centres de services partagés (CSP), agilité organisationnelle, intégration des acquisitions africaines"
+      - "FCS Opérationnel : excellence opérationnelle réseau/digital, gestion de la qualité de service, conformité réglementaire multi-pays"
+      - "FCS Technologique : SI bancaire core banking, open banking API, cybersécurité, IA dans les processus risques/crédit/compliance"
+      - "FCS Humain & RH : attraction talents numériques, reconversion conseillers agences, management interculturel panafricain, diversité"
+      - "Dimensionnement : évolution des effectifs (réduction réseau vs croissance digital/compliance), ratio siège/filiales, émergence nouvelles fonctions (data, cyber, open banking)"
+      - "Gouvernance : gouvernance groupe panafricain (siège/filiales), rôle des Conseils, conformité BAM/Bâle, reporting ESG, pilotage performance multi-entités"
+      - "Externalisation & Partenariats : outsourcing IT, centres de services partagés, co-développement fintechs, externalisation back-office"
+      - "Systèmes d'Information : modernisation core banking, SI groupe harmonisé Afrique, SIRH groupe, tableaux de bord consolidés, souveraineté données"
+      - "Gestion de la performance : KPIs bancaires (NBI, coûts, conformité), incentives commerciaux vs risques, évaluation performance filiales africaines"
+      - "Dimension Afrique & MENA : best practices banques panafricaines (Ecobank, Standard Bank, CIB Égypte), opportunités Union Africaine, risques souverains"
+      - "RSE & Finance inclusive : finance verte, inclusion financière Afrique, politique diversité, empreinte carbone des opérations"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  AGROALIMENTAIRE — Maroc & Afrique
+  # ════════════════════════════════════════════════════════════════════════════
+  agroalimentaire_maroc:
+    label: "Agroalimentaire — Maroc & Afrique"
+    language: "fr"
+
+    search_queries:
+      - "transformation organisationnelle industrie agroalimentaire Maroc 2025"
+      - "agri-food industry Morocco Africa organizational transformation"
+      - "OCP Centrale Danone Nestlé Maroc transformation organisation"
+      - "agroalimentaire Maroc digitalisation supply chain transformation"
+      - "industrie alimentaire Maroc Afrique gouvernance filiales"
+      - "transformation RH agroalimentaire Maroc compétences"
+      - "externalisation agroalimentaire Maroc logistique distribution"
+      - "Plan Maroc Vert transformation filières agroalimentaires"
+      - "agri-food transformation Africa supply chain organisational"
+      - "industrie agroalimentaire Maroc ESG durabilité organisation"
+
+    rss_feeds:
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+      - url: "https://www.leconomiste.com/rss.xml"
+        name: "L'Économiste Maroc"
+      - url: "https://www.agenceecofin.com/rss/agro"
+        name: "Agence Ecofin — Agro Afrique"
+      - url: "https://www.lematin.ma/rss/economie"
+        name: "Le Matin Maroc"
+
+    context_note: >
+      L'agroalimentaire représente ~25 % du PIB industriel marocain. Acteurs majeurs :
+      Centrale Danone, Nestlé Maroc, Copag, Délassagne, Marjane/ONA, OCP (fertilisants/agri).
+      Secteur structuré autour du Plan Maroc Vert (Green Generation 2020-2030) et de l'ambition
+      d'export vers l'Afrique. Enjeux organisationnels : modernisation des structures familiales,
+      intégration verticale vs externalisation, gestion des filières agricoles, transformation
+      numérique de la supply chain, gouvernance des coopératives. Fort enjeu RSE/durabilité
+      (eau, empreinte carbone, conditions travail agricole).
+      Questions clients LMS ORH : comment structurer la direction générale d'un groupe agroalimentaire
+      en croissance ? Quel modèle de gouvernance pour les coopératives et filiales africaines ?
+      Comment externaliser la logistique et la distribution ? Quel SIRH adapté aux saisonniers ?
+      FOCUS : transformations organisationnelles uniquement.
+
+    benchmark_axes:
+      - "FCS Stratégique : intégration verticale vs modèle asset-light, stratégie export Afrique, positionnement sur les chaînes de valeur mondiales (label, certification)"
+      - "FCS Organisationnel : structure groupe agroalimentaire, gouvernance coopératives, intégration filiales africaines, management de projet transformation"
+      - "FCS Opérationnel : efficience supply chain agri-food, gestion qualité (HACCP, ISO 22000), traçabilité, logistique froid"
+      - "FCS Technologique : digitalisation supply chain (ERP, WMS, TMS), agriculture de précision, traçabilité blockchain, e-commerce B2B"
+      - "FCS Humain & RH : gestion saisonniers et permanents, attraction talents (supply chain, marketing, digital), formation terrain, management interculturel"
+      - "Dimensionnement : effectifs saisonniers vs permanents, ratio fonctions support/production, évolution vers des structures plus légères"
+      - "Gouvernance : gouvernance groupes familiaux, conseil d'administration professionnel, pilotage filiales export, conformité réglementaire export"
+      - "Externalisation & Partenariats : outsourcing logistique/distribution, contrats coopératives, partenariats distribution Afrique, JV internationales"
+      - "Systèmes d'Information : ERP adapté à l'agroalimentaire, SIRH gestion saisonniers, SI traçabilité, tableau de bord RSE"
+      - "Dimension Afrique & MENA : opportunités export alimentaire africain, best practices groupes agroalimentaires Afrique du Sud/Nigeria, enjeux ZLECAf"
+      - "RSE & Durabilité : gestion de l'eau, empreinte carbone, conditions de travail agricole, agriculture biologique, économie circulaire"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  TÉLÉCOMS & TECH — Maroc & Afrique
+  # ════════════════════════════════════════════════════════════════════════════
+  telecom_maroc:
+    label: "Télécoms & Tech — Maroc & Afrique"
+    language: "fr"
+
+    search_queries:
+      - "transformation organisationnelle télécoms Maroc Afrique 2025"
+      - "Maroc Telecom IAM Orange Maroc transformation organisationnelle"
+      - "telecom Africa digital transformation organizational 2025"
+      - "transformation RH télécoms Maroc compétences numériques"
+      - "externalisation outsourcing télécoms Maroc infrastructure"
+      - "gouvernance télécom Maroc filiales Afrique subsaharienne"
+      - "5G transformation organisationnelle opérateurs Maroc"
+      - "tech sector Morocco digital hub Africa organizational model"
+      - "ANRT Maroc réglementation transformation organisationnelle"
+      - "Offshoring IT Maroc transformation organisation tech"
+
+    rss_feeds:
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+      - url: "https://www.leconomiste.com/rss.xml"
+        name: "L'Économiste Maroc"
+      - url: "https://www.agenceecofin.com/rss/telecoms"
+        name: "Agence Ecofin — Télécoms Afrique"
+      - url: "https://www.lematin.ma/rss/economie"
+        name: "Le Matin Maroc"
+
+    context_note: >
+      Le marché télécoms marocain est dominé par Maroc Telecom (IAM, groupe Etisalat), Orange Maroc
+      et Inwi. Maroc Telecom opère dans 17 pays africains, Orange en Afrique subsaharienne.
+      Le Maroc ambitionne de devenir hub tech africain via la stratégie Maroc Digital 2030 et le
+      développement des offshoring IT (CasaShore, TechnoPark). Enjeux organisationnels majeurs :
+      transformation des opérateurs vers les services cloud/cybersécurité/IoT, gouvernance des filiales
+      africaines, reconversion des effectifs liés au réseau physique, attraction des talents tech.
+      ANRT = régulateur. Fort enjeu de dimensionnement : réduction réseau traditionnel vs croissance
+      équipes data/digital.
+      Questions clients LMS ORH : comment réorganiser un opérateur en transition digital ?
+      Quel modèle de gouvernance pour les filiales Afrique ? Comment externaliser l'infrastructure ?
+      Quel SIRH pour gérer des équipes techniques multi-pays ?
+      FOCUS : transformations organisationnelles uniquement.
+
+    benchmark_axes:
+      - "FCS Stratégique : pivot vers les services cloud/tech/IoT, positionnement hub digital africain, stratégie filiales Afrique (consolidation vs expansion)"
+      - "FCS Organisationnel : transformation de l'opérateur telecom en entreprise tech, structure agile, centres d'excellence digitaux, intégration filiales africaines"
+      - "FCS Opérationnel : efficience opérationnelle réseau, transition vers les opérations cloud, qualité de service, gestion des changements techniques"
+      - "FCS Technologique : 5G et impacts organisationnels, architecture cloud/edge, SI de pilotage multi-pays, cybersécurité des infrastructures critiques"
+      - "FCS Humain & RH : reconversion ingénieurs réseau vers cloud/data, attraction talents tech (vs GAFAM et startups), management des équipes distribuées Afrique"
+      - "Dimensionnement : réduction effectifs réseau physique vs croissance équipes tech/digital/data, ratio siège/filiales Afrique, nouvelles fonctions (cloud architects, data engineers)"
+      - "Gouvernance : gouvernance opérateur panafricain, rôle Etisalat/Orange dans la stratégie locale, conformité ANRT, reporting consolidé multi-pays"
+      - "Externalisation & Partenariats : outsourcing maintenance réseau, hyperscalers (AWS, Azure, GCP), partenariats SI/tech, sous-traitance call centers"
+      - "Systèmes d'Information : SI groupe multi-pays, harmonisation ERP/BSS/OSS, SIRH pan-africain, tableaux de bord performance consolidés"
+      - "Dimension Afrique & MENA : best practices télécom panafricains (MTN, Airtel, Safaricom/M-Pesa), fintech mobile, opportunités connectivité Afrique"
+      - "RSE & Impact : inclusion numérique, accès Internet rural Afrique, empreinte carbone data centers, politique diversité tech"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  DISTRIBUTION & RETAIL — Maroc & Afrique
+  # ════════════════════════════════════════════════════════════════════════════
+  distribution_maroc:
+    label: "Distribution & Retail — Maroc & Afrique"
+    language: "fr"
+
+    search_queries:
+      - "transformation organisationnelle distribution retail Maroc 2025"
+      - "Marjane Label Vie BIM Maroc transformation organisationnelle"
+      - "retail digital transformation Morocco Africa omnichannel"
+      - "grande distribution Maroc transformation RH logistique"
+      - "e-commerce Maroc Afrique transformation modèle opérationnel"
+      - "externalisation logistique distribution Maroc Afrique"
+      - "gouvernance groupe distribution Maroc filiales"
+      - "supply chain retail Maroc digitalisation transformation"
+      - "distribution informelle formel Maroc transformation organisationnelle"
+
+    rss_feeds:
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+      - url: "https://www.leconomiste.com/rss.xml"
+        name: "L'Économiste Maroc"
+      - url: "https://www.agenceecofin.com/rss/commerce"
+        name: "Agence Ecofin — Commerce Afrique"
+
+    context_note: >
+      La distribution marocaine est en pleine structuration : Marjane Holding (ONA/SNI),
+      Label Vie (Carrefour), BIM, Aswak Assalam. Coexistence du commerce moderne (~15 %)
+      et du commerce traditionnel (épiceries, souks, ~85 %). Fort développement du e-commerce
+      (Jumia, Glovo, acteurs locaux). Enjeux organisationnels : professionnalisation des
+      fonctions support, gestion de masse salariale dans un secteur à forte rotation,
+      digitalisation supply chain, omnicanal, gouvernance des franchises.
+      Questions clients LMS ORH : comment organiser la direction des opérations d'une enseigne
+      en croissance ? Quel modèle logistique (intégré vs externalisé) ? Comment gérer les
+      ressources humaines dans un secteur à fort turn-over ? Quel SI pour le pilotage
+      omnicanal ?
+      FOCUS : transformations organisationnelles uniquement.
+
+    benchmark_axes:
+      - "FCS Stratégique : modèle omnicanal (physique + digital), positionnement face au commerce informel et e-commerce, stratégie d'expansion Afrique"
+      - "FCS Organisationnel : structure enseignes multi-formats, gouvernance franchise, intégration des acquisitions, organisation centrale achats/logistique"
+      - "FCS Opérationnel : efficience supply chain et logistique, gestion des stocks, qualité en rayon, conformité réglementaire (normes alimentaires)"
+      - "FCS Technologique : ERP retail, outils CRM/fidélisation, e-commerce plateforme, data analytics clients, digitalisation entrepôts (WMS)"
+      - "FCS Humain & RH : gestion masse salariale (rotation élevée), formation continue caissiers/vendeurs, développement managers magasins, attraction talents e-commerce/digital"
+      - "Dimensionnement : ratio siège/magasins, évolution vers less staff/plus digital (caisses automatiques), croissance équipes e-commerce et data"
+      - "Gouvernance : gouvernance franchise vs succursale, pilotage performance réseau de points de vente, conformité sécurité alimentaire"
+      - "Externalisation & Partenariats : outsourcing logistique (3PL), sous-traitance sécurité/nettoyage, market places e-commerce, partenariats livraison"
+      - "Systèmes d'Information : SI retail intégré (ERP+CRM+WMS), omnicanal, SIRH gestion temps de travail, tableau de bord réseau en temps réel"
+      - "Dimension Afrique & MENA : best practices retail africains (Shoprite, Carrefour Afrique), développement e-commerce Afrique, logistique last-mile"
+      - "RSE & Durabilité : anti-gaspillage alimentaire, emballages responsables, conditions de travail, intégration fournisseurs locaux"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  SANTÉ & HÔPITAL — Maroc & Afrique
+  # ════════════════════════════════════════════════════════════════════════════
   sante:
-    label: "Santé & Hôpital"
+    label: "Santé & Hôpital — Maroc & Afrique"
     language: "fr"
-    search_queries:
-      - "transformation organisationnelle hôpital santé 2025"
-      - "healthcare digital transformation hospital 2025"
-      - "transformation système de santé France 2025"
-      - "e-santé télémédecine transformation organisationnelle"
-    rss_feeds:
-      - url: "https://www.hospimedia.fr/rss"
-        name: "Hospimedia"
-      - url: "https://www.who.int/rss-feeds/news-french.xml"
-        name: "OMS News"
-    focus_areas:
-      - "Numérique en santé"
-      - "Restructuration hospitalière"
-      - "Ressources humaines soignantes"
-      - "Partenariats public-privé"
 
-  industrie:
-    label: "Industrie & Manufacture"
-    language: "fr"
     search_queries:
-      - "transformation organisationnelle industrie manufacture 2025"
-      - "industrie 4.0 transformation digitale 2025"
-      - "manufacturing organizational transformation smart factory"
-      - "industrie robotisation transformation emploi 2025"
+      - "transformation organisationnelle hôpital santé Maroc 2025"
+      - "healthcare system transformation Morocco Africa 2025"
+      - "réforme système santé Maroc organisation hospitalière"
+      - "e-santé télémédecine transformation organisationnelle Maroc"
+      - "AMO couverture médicale Maroc transformation système santé"
+      - "hôpital public privé Maroc gouvernance transformation"
+      - "santé Afrique transformation organisationnelle investissement"
+      - "ressources humaines santé Maroc compétences soignants"
+
     rss_feeds:
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+      - url: "https://www.who.int/rss-feeds/news-french.xml"
+        name: "OMS — Afrique/Monde"
+      - url: "https://www.agenceecofin.com/rss/sante"
+        name: "Agence Ecofin — Santé Afrique"
+
+    context_note: >
+      Le système de santé marocain est en profonde réforme : généralisation de l'AMO (Assurance
+      Maladie Obligatoire), Plan National de Santé 2025, privatisation partielle, développement
+      des cliniques privées. Acteurs : CHU publics, cliniques AKDITAL, Polyclinique du Littoral,
+      groupes privés internationaux. Régulateur : Ministère de la Santé. Enjeux organisationnels :
+      restructuration hospitalière, gestion des RH soignants (pénurie infirmiers/médecins),
+      gouvernance public-privé, digitalisation du dossier patient.
+      FOCUS : transformations organisationnelles uniquement.
+
+    benchmark_axes:
+      - "FCS Stratégique : modèle public-privé, partenariats PPP, positionnement hub santé Afrique, médecine de référence régionale"
+      - "FCS Organisationnel : restructuration hospitalière, gouvernance cliniques/groupes privés, management par pôles de spécialités"
+      - "FCS Opérationnel : efficience opérationnelle blocs/urgences/consultations, gestion files d'attente, qualité et accréditation"
+      - "FCS Humain & RH : gestion pénurie soignants, fidélisation médecins, formation continue, management des équipes pluridisciplinaires"
+      - "Dimensionnement : ratio médecin/infirmier/population, optimisation effectifs paramédicaux, nouvelles fonctions (data health, téléradiologie)"
+      - "Gouvernance : gouvernance CHU/hôpitaux régionaux, pilotage performance cliniques, conformité réglementaire Ministère Santé"
+      - "Externalisation & Partenariats : outsourcing restauration/linge/sécurité, PPP construction, partenariats formation médicale"
+      - "Systèmes d'Information : dossier patient numérique, télémedecine, SI hospitalier (HIS), interopérabilité avec AMO/CNOPS"
+      - "Dimension Afrique & MENA : best practices hôpitaux africains, développement tourisme médical au Maroc, accès aux soins Afrique subsaharienne"
+      - "RSE & Éthique : accès aux soins populations défavorisées, éthique médicale, durabilité environnementale des établissements"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  #  INDUSTRIE & MANUFACTURE — Maroc & Afrique
+  # ════════════════════════════════════════════════════════════════════════════
+  industrie:
+    label: "Industrie & Manufacture — Maroc & Afrique"
+    language: "fr"
+
+    search_queries:
+      - "transformation organisationnelle industrie manufacture Maroc 2025"
+      - "industrie 4.0 Maroc transformation digitale manufacturing"
+      - "automobile aéronautique Maroc transformation organisationnelle"
+      - "industrie Maroc Afrique offshoring nearshoring transformation"
+      - "manufacturing Morocco Africa organizational model transformation"
+      - "transformation RH industrie Maroc compétences techniques"
+      - "externalisation sous-traitance industrie Maroc gouvernance"
+      - "Renault PSA Airbus Safran Maroc transformation organisation"
+
+    rss_feeds:
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+      - url: "https://www.leconomiste.com/rss.xml"
+        name: "L'Économiste Maroc"
       - url: "https://www.usinenouvelle.com/rss/toutes-les-actualites.rss"
         name: "L'Usine Nouvelle"
-    focus_areas:
-      - "Industrie 4.0 et automatisation"
-      - "Transformation des compétences"
-      - "Supply chain résilience"
-      - "Transition énergétique"
+      - url: "https://www.agenceecofin.com/rss/industrie"
+        name: "Agence Ecofin — Industrie Afrique"
+
+    context_note: >
+      L'industrie marocaine est portée par l'automobile (Renault, PSA/Stellantis, 700 000 véhicules/an
+      dont 85 % exportés), l'aéronautique (Airbus, Safran, Thales, 140 entreprises, 20 000 emplois),
+      le textile et la chimie/parachimie. Le Maroc ambitionne de devenir hub industriel Afrique/Europe
+      via sa position géographique et ses accords de libre-échange. Enjeux organisationnels :
+      montée en compétences vers l'Industrie 4.0, relations donneurs d'ordre/sous-traitants,
+      attraction de talents techniques, gouvernance des zones industrielles.
+      FOCUS : transformations organisationnelles uniquement.
+
+    benchmark_axes:
+      - "FCS Stratégique : positionnement hub industriel Afrique-Europe, montée en gamme (de l'assemblage vers l'ingénierie), attraction investisseurs"
+      - "FCS Organisationnel : organisation Industrie 4.0, structure lean manufacturing, relations donneurs d'ordre/sous-traitants, gestion des clusters industriels"
+      - "FCS Opérationnel : lean manufacturing, excellence opérationnelle, qualité (IATF, EN9100), efficience énergétique"
+      - "FCS Technologique : robotisation, cobotique, IoT industriel, MES, maintenance prédictive, jumeaux numériques"
+      - "FCS Humain & RH : formation opérateurs techniques, attraction ingénieurs, relations sociales et partenaires sociaux, sécurité au travail"
+      - "Dimensionnement : impact robotisation sur les effectifs, montée en compétences vs recrutement, ratio ingénieurs/opérateurs"
+      - "Gouvernance : gouvernance zones industrielles (P2I, TFZ), relations avec l'État (contrats programmes), pilotage performance sous-traitants"
+      - "Externalisation & Partenariats : sous-traitance industrielle, accords donneurs d'ordre, outsourcing fonctions support, JV technologiques"
+      - "Systèmes d'Information : ERP industrie, MES, SIRH, SI qualité, tableaux de bord opérationnels en temps réel"
+      - "Dimension Afrique & MENA : nearshoring vers Maroc, benchmarks industriels Afrique du Nord, opportunités transferts industriels vers Afrique subsaharienne"
+      - "RSE & Transition : empreinte carbone, énergie renouvelable dans les process, conditions de travail, économie circulaire industrielle"
