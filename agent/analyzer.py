@@ -116,8 +116,7 @@ TOOL_PART_A = {
                     },
                     "required": ["pratique", "description", "niveau_adoption"]
                 }
-            }
-        },
+            },
             "dimension_afrique_mena": {
                 "type": "object",
                 "description": "Analyse spécifique Afrique/MENA : particularités, écarts et opportunités vs benchmark international",
