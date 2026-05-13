@@ -55,16 +55,16 @@ sectors:
         name: "FiercePharma"
       - url: "https://medias24.com/rss"
         name: "Medias24 Maroc"
-      - url: "https://www.agenceecofin.com/rss/sante"
-        name: "Agence Ecofin — Santé Afrique"
-      - url: "https://www.lematin.ma/rss/economie"
-        name: "Le Matin Maroc — Économie"
-      - url: "https://www.leconomiste.com/rss.xml"
-        name: "L'Économiste Maroc"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
+      - url: "https://www.hespress.com/feed"
+        name: "Hespress — Économie Maroc"
+      - url: "https://www.challenge.ma/feed"
+        name: "Challenge — Business Maroc"
       - url: "https://www.who.int/rss-feeds/news-french.xml"
         name: "OMS — Actualités Afrique/Monde"
-      - url: "https://www.drugdiscoverytoday.com/rss/news"
-        name: "Drug Discovery Today"
+      - url: "https://www.biopharmadive.com/feeds/news/"
+        name: "BioPharma Dive"
 
     context_note: >
       Le Maroc est le 2e producteur pharmaceutique d'Afrique (~600 entreprises, ~40 000 emplois directs).
@@ -127,12 +127,12 @@ sectors:
     rss_feeds:
       - url: "https://medias24.com/rss"
         name: "Medias24 Maroc"
-      - url: "https://www.leconomiste.com/rss.xml"
-        name: "L'Économiste Maroc"
-      - url: "https://www.agenceecofin.com/rss/finances"
-        name: "Agence Ecofin — Finance Afrique"
-      - url: "https://www.lematin.ma/rss/economie"
-        name: "Le Matin Maroc — Économie"
+      - url: "https://www.challenge.ma/feed"
+        name: "Challenge — Business Maroc"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
+      - url: "https://www.hespress.com/feed"
+        name: "Hespress — Économie Maroc"
       - url: "https://www.finews.net/rss"
         name: "Finews (international)"
 
@@ -186,12 +186,12 @@ sectors:
     rss_feeds:
       - url: "https://medias24.com/rss"
         name: "Medias24 Maroc"
-      - url: "https://www.leconomiste.com/rss.xml"
-        name: "L'Économiste Maroc"
-      - url: "https://www.agenceecofin.com/rss/agro"
-        name: "Agence Ecofin — Agro Afrique"
-      - url: "https://www.lematin.ma/rss/economie"
-        name: "Le Matin Maroc"
+      - url: "https://www.challenge.ma/feed"
+        name: "Challenge — Business Maroc"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
+      - url: "https://telquel.ma/feed"
+        name: "TelQuel — Économie Maroc"
 
     context_note: >
       L'agroalimentaire représente ~25 % du PIB industriel marocain. Acteurs majeurs :
@@ -241,12 +241,12 @@ sectors:
     rss_feeds:
       - url: "https://medias24.com/rss"
         name: "Medias24 Maroc"
-      - url: "https://www.leconomiste.com/rss.xml"
-        name: "L'Économiste Maroc"
-      - url: "https://www.agenceecofin.com/rss/telecoms"
-        name: "Agence Ecofin — Télécoms Afrique"
-      - url: "https://www.lematin.ma/rss/economie"
-        name: "Le Matin Maroc"
+      - url: "https://www.challenge.ma/feed"
+        name: "Challenge — Business Maroc"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
+      - url: "https://telquel.ma/feed"
+        name: "TelQuel — Économie Maroc"
 
     context_note: >
       Le marché télécoms marocain est dominé par Maroc Telecom (IAM, groupe Etisalat), Orange Maroc
@@ -296,10 +296,10 @@ sectors:
     rss_feeds:
       - url: "https://medias24.com/rss"
         name: "Medias24 Maroc"
-      - url: "https://www.leconomiste.com/rss.xml"
-        name: "L'Économiste Maroc"
-      - url: "https://www.agenceecofin.com/rss/commerce"
-        name: "Agence Ecofin — Commerce Afrique"
+      - url: "https://www.challenge.ma/feed"
+        name: "Challenge — Business Maroc"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
 
     context_note: >
       La distribution marocaine est en pleine structuration : Marjane Holding (ONA/SNI),
@@ -349,8 +349,8 @@ sectors:
         name: "Medias24 Maroc"
       - url: "https://www.who.int/rss-feeds/news-french.xml"
         name: "OMS — Afrique/Monde"
-      - url: "https://www.agenceecofin.com/rss/sante"
-        name: "Agence Ecofin — Santé Afrique"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
 
     context_note: >
       Le système de santé marocain est en profonde réforme : généralisation de l'AMO (Assurance
@@ -393,12 +393,12 @@ sectors:
     rss_feeds:
       - url: "https://medias24.com/rss"
         name: "Medias24 Maroc"
-      - url: "https://www.leconomiste.com/rss.xml"
-        name: "L'Économiste Maroc"
-      - url: "https://www.usinenouvelle.com/rss/toutes-les-actualites.rss"
-        name: "L'Usine Nouvelle"
-      - url: "https://www.agenceecofin.com/rss/industrie"
-        name: "Agence Ecofin — Industrie Afrique"
+      - url: "https://www.challenge.ma/feed"
+        name: "Challenge — Business Maroc"
+      - url: "https://www.mckinsey.com/insights/rss"
+        name: "McKinsey Insights — Industrie"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
 
     context_note: >
       L'industrie marocaine est portée par l'automobile (Renault, PSA/Stellantis, 700 000 véhicules/an
