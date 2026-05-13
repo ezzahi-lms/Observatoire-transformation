@@ -1,10 +1,11 @@
 """
 Benchmark de transformation organisationnelle via Claude.
-Deux appels enchaînés pour contourner la limite de tokens :
+Trois appels enchaînés pour contourner la limite de 8 192 tokens :
   - Appel A : synthèse + 3 lectures So What?, qualité sources, FCS, dimensionnement,
-              gouvernance, performance, dimension Afrique/MENA, questions clients
+              gouvernance, performance
   - Appel B : externalisation, RSE, signaux faibles, prospective, recommandations
-              (avec angle_mission conseil), index sources
+              (avec angle_mission conseil)
+  - Appel C : dimension Afrique/MENA, questions clients, index des sources
 """
 import logging
 import os
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 TOOL_PART_A = {
     "name": "benchmark_part_a",
-    "description": "Stocke la 1re partie du benchmark (synthèse + 3 lectures So What?, FCS, dimensionnement, gouvernance, performance, Afrique/MENA, questions clients).",
+    "description": "Stocke la 1re partie du benchmark (synthèse + 3 lectures So What?, qualité sources, FCS, dimensionnement, gouvernance, performance).",
     "input_schema": {
         "type": "object",
         "properties": {
@@ -116,100 +117,10 @@ TOOL_PART_A = {
                     },
                     "required": ["pratique", "description", "niveau_adoption"]
                 }
-            },
-            "dimension_afrique_mena": {
-                "type": "object",
-                "description": "Analyse spécifique Afrique/MENA : particularités, écarts et opportunités vs benchmark international",
-                "properties": {
-                    "contexte_regional": {
-                        "type": "string",
-                        "description": "Spécificités du marché Afrique/MENA pour ce secteur (réglementation, maturité, dynamiques locales)"
-                    },
-                    "ecarts_vs_international": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "axe": {"type": "string"},
-                                "situation_internationale": {"type": "string"},
-                                "situation_afrique_mena": {"type": "string"},
-                                "gap_a_combler": {"type": "string"}
-                            },
-                            "required": ["axe", "situation_afrique_mena", "gap_a_combler"]
-                        }
-                    },
-                    "opportunites_maroc": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Opportunités spécifiques de transformation orga pour les entreprises marocaines du secteur"
-                    },
-                    "sources": {"type": "array", "items": {"type": "integer"}}
-                },
-                "required": ["contexte_regional", "opportunites_maroc"]
-            },
-            "questions_clients": {
-                "type": "object",
-                "description": "Les 4 grandes questions orga que posent les clients du secteur à LMS ORH",
-                "properties": {
-                    "dimensionnement": {
-                        "type": "object",
-                        "properties": {
-                            "questions_typiques": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "Questions des clients sur taille des équipes, structures, ratios d'encadrement"
-                            },
-                            "tendances_observees": {"type": "string"},
-                            "sources": {"type": "array", "items": {"type": "integer"}}
-                        },
-                        "required": ["questions_typiques", "tendances_observees"]
-                    },
-                    "gouvernance": {
-                        "type": "object",
-                        "properties": {
-                            "questions_typiques": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "Questions des clients sur modes de décision, reporting, conformité, contrôle"
-                            },
-                            "tendances_observees": {"type": "string"},
-                            "sources": {"type": "array", "items": {"type": "integer"}}
-                        },
-                        "required": ["questions_typiques", "tendances_observees"]
-                    },
-                    "externalisation": {
-                        "type": "object",
-                        "properties": {
-                            "questions_typiques": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "Questions des clients sur make-or-buy, sous-traitance, modèles hybrides"
-                            },
-                            "tendances_observees": {"type": "string"},
-                            "sources": {"type": "array", "items": {"type": "integer"}}
-                        },
-                        "required": ["questions_typiques", "tendances_observees"]
-                    },
-                    "systemes_information": {
-                        "type": "object",
-                        "properties": {
-                            "questions_typiques": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "Questions des clients sur digitalisation, SIRH, ERP, IA dans les processus orga"
-                            },
-                            "tendances_observees": {"type": "string"},
-                            "sources": {"type": "array", "items": {"type": "integer"}}
-                        },
-                        "required": ["questions_typiques", "tendances_observees"]
-                    }
-                },
-                "required": ["dimensionnement", "gouvernance", "externalisation", "systemes_information"]
             }
         },
         "required": ["synthese_executive", "qualite_sources", "facteurs_cles_succes",
-                     "tendances_dimensionnement", "pratiques_gouvernance", "gestion_performance",
-                     "dimension_afrique_mena", "questions_clients"]
+                     "tendances_dimensionnement", "pratiques_gouvernance", "gestion_performance"]
     }
 }
 
@@ -318,6 +229,111 @@ TOOL_PART_B = {
                     "required": ["action", "justification", "priorite", "horizon", "type", "angle_mission"]
                 }
             },
+        },
+        "required": ["externalisation_partenariats", "rse_ethique", "signaux_faibles",
+                     "prospective", "recommandations"]
+    }
+}
+
+# ─────────────────────────────────────────
+#  TOOL PART C
+# ─────────────────────────────────────────
+
+TOOL_PART_C = {
+    "name": "benchmark_part_c",
+    "description": "Stocke la 3e partie du benchmark (dimension Afrique/MENA, questions clients, index des sources).",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "dimension_afrique_mena": {
+                "type": "object",
+                "description": "Analyse spécifique Afrique/MENA : particularités, écarts et opportunités vs benchmark international",
+                "properties": {
+                    "contexte_regional": {
+                        "type": "string",
+                        "description": "Spécificités du marché Afrique/MENA pour ce secteur (réglementation, maturité, dynamiques locales)"
+                    },
+                    "ecarts_vs_international": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "axe": {"type": "string"},
+                                "situation_internationale": {"type": "string"},
+                                "situation_afrique_mena": {"type": "string"},
+                                "gap_a_combler": {"type": "string"}
+                            },
+                            "required": ["axe", "situation_afrique_mena", "gap_a_combler"]
+                        }
+                    },
+                    "opportunites_maroc": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Opportunités spécifiques de transformation orga pour les entreprises marocaines du secteur"
+                    },
+                    "sources": {"type": "array", "items": {"type": "integer"}}
+                },
+                "required": ["contexte_regional", "opportunites_maroc"]
+            },
+            "questions_clients": {
+                "type": "object",
+                "description": "Les 4 grandes questions orga que posent les clients du secteur à LMS ORH",
+                "properties": {
+                    "dimensionnement": {
+                        "type": "object",
+                        "properties": {
+                            "questions_typiques": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Questions des clients sur taille des équipes, structures, ratios d'encadrement"
+                            },
+                            "tendances_observees": {"type": "string"},
+                            "sources": {"type": "array", "items": {"type": "integer"}}
+                        },
+                        "required": ["questions_typiques", "tendances_observees"]
+                    },
+                    "gouvernance": {
+                        "type": "object",
+                        "properties": {
+                            "questions_typiques": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Questions des clients sur modes de décision, reporting, conformité, contrôle"
+                            },
+                            "tendances_observees": {"type": "string"},
+                            "sources": {"type": "array", "items": {"type": "integer"}}
+                        },
+                        "required": ["questions_typiques", "tendances_observees"]
+                    },
+                    "externalisation": {
+                        "type": "object",
+                        "properties": {
+                            "questions_typiques": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Questions des clients sur make-or-buy, sous-traitance, modèles hybrides"
+                            },
+                            "tendances_observees": {"type": "string"},
+                            "sources": {"type": "array", "items": {"type": "integer"}}
+                        },
+                        "required": ["questions_typiques", "tendances_observees"]
+                    },
+                    "systemes_information": {
+                        "type": "object",
+                        "properties": {
+                            "questions_typiques": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Questions des clients sur digitalisation, SIRH, ERP, IA dans les processus orga"
+                            },
+                            "tendances_observees": {"type": "string"},
+                            "sources": {"type": "array", "items": {"type": "integer"}}
+                        },
+                        "required": ["questions_typiques", "tendances_observees"]
+                    }
+                },
+                "required": ["dimensionnement", "gouvernance", "externalisation", "systemes_information"]
+            },
             "index_sources": {
                 "type": "array",
                 "items": {
@@ -334,8 +350,7 @@ TOOL_PART_B = {
                 }
             }
         },
-        "required": ["externalisation_partenariats", "rse_ethique", "signaux_faibles",
-                     "prospective", "recommandations", "index_sources"]
+        "required": ["dimension_afrique_mena", "questions_clients", "index_sources"]
     }
 }
 
@@ -544,7 +559,7 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
 **Sources (citer via [N]) :**
 {articles_text}"""
 
-    logger.info("Appel Claude Part A (synthèse + So What?, FCS, dimensionnement, gouvernance, performance, Afrique/MENA, questions clients)...")
+    logger.info("Appel Claude Part A (synthèse + So What?, qualité sources, FCS, dimensionnement, gouvernance, performance)...")
     prompt_a = (
         base_prompt
         + "\n\nUtilise `benchmark_part_a` pour les sections :\n"
@@ -553,11 +568,9 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
         "3. facteurs clés de succès (tous niveaux)\n"
         "4. tendances de dimensionnement\n"
         "5. pratiques de gouvernance\n"
-        "6. gestion de la performance\n"
-        "7. dimension Afrique/MENA (contexte régional, écarts vs international, opportunités Maroc)\n"
-        "8. questions clients (dimensionnement / gouvernance / externalisation / systèmes d'information)\n\n"
+        "6. gestion de la performance\n\n"
         "⚠️ Les lectures_so_what dans synthese_executive sont OBLIGATOIRES — 3 angles distincts : "
-        "secteur, clients de LMS, cabinet LMS ORH. Dimension Afrique/MENA également OBLIGATOIRE."
+        "secteur, clients de LMS, cabinet LMS ORH."
     )
     part_a = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_A, "benchmark_part_a", prompt_a)
 
@@ -570,16 +583,32 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
         "3. signaux faibles\n"
         "4. analyse prospective avec 3 scénarios (Optimiste / Central / Pessimiste)\n"
         "5. recommandations stratégiques (5-8) — chacune DOIT avoir un `angle_mission` : "
-        "quelle mission concrète LMS ORH peut-il proposer en réponse à ce besoin ?\n\n"
-        "⚠️ OBLIGATOIRE — `index_sources` : liste TOUTES les sources citées via [N] dans "
-        "l'ENSEMBLE du benchmark (Part A + Part B). Pour chaque source citée, inclure id=N, "
-        "titre, source, url, date, pertinence. Un index vide ou incomplet rend le rapport "
-        "inexploitable pour les décideurs."
+        "quelle mission concrète LMS ORH peut-il proposer en réponse à ce besoin ?"
     )
     part_b = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_B, "benchmark_part_b", prompt_b)
 
-    # Fusion
-    result = {**part_a, **part_b}
+    logger.info("Appel Claude Part C (dimension Afrique/MENA, questions clients, index sources)...")
+    prompt_c = (
+        base_prompt
+        + "\n\nUtilise `benchmark_part_c` pour les sections :\n"
+        "1. dimension Afrique/MENA : contexte régional, écarts vs pratiques internationales "
+        "(tableau axe / situation internationale / situation Afrique-MENA / gap à combler), "
+        "opportunités spécifiques pour les entreprises marocaines du secteur\n"
+        "2. questions clients — les 4 types de questions récurrentes que les clients posent à LMS ORH :\n"
+        "   • dimensionnement (taille équipes, ratios, structures)\n"
+        "   • gouvernance (décision, reporting, conformité)\n"
+        "   • externalisation (make-or-buy, hybrides)\n"
+        "   • systèmes d'information (SIRH, ERP, IA orga)\n"
+        "3. index_sources : liste TOUTES les sources citées via [N] dans l'ENSEMBLE du benchmark. "
+        "Pour chaque source citée, inclure id=N, titre, source, url, date, pertinence. "
+        "Un index vide ou incomplet rend le rapport inexploitable pour les décideurs.\n\n"
+        "⚠️ Dimension Afrique/MENA et questions_clients sont OBLIGATOIRES. "
+        "index_sources doit couvrir toutes les sources de ce benchmark."
+    )
+    part_c = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_C, "benchmark_part_c", prompt_c)
+
+    # Fusion des 3 parties
+    result = {**part_a, **part_b, **part_c}
 
     # ── Reconstruction de l'index si Claude ne l'a pas rempli ─────────────────
     if not result.get("index_sources"):
@@ -593,5 +622,5 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
         "nb_sources_analysees": len(articles),
         "freshness": freshness,
     }
-    logger.info("Benchmark complet — deux appels fusionnés avec succès.")
+    logger.info("Benchmark complet — trois appels fusionnés avec succès.")
     return result
