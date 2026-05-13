@@ -77,6 +77,25 @@ def _sources_str(ids: List[int]) -> str:
     return " [" + ", ".join(str(i) for i in ids) + "]"
 
 
+def _safe_list(val) -> list:
+    """
+    Normalise un champ qui devrait être une liste de dicts.
+    Claude retourne parfois une string JSON — on la parse automatiquement.
+    """
+    import json as _json
+    if isinstance(val, str):
+        try:
+            parsed = _json.loads(val)
+            if isinstance(parsed, list):
+                return [item for item in parsed if isinstance(item, dict)]
+        except Exception:
+            pass
+        return []
+    if isinstance(val, list):
+        return [item for item in val if isinstance(item, dict)]
+    return []
+
+
 # ─────────────────────────────────────────
 #  DOCX
 # ─────────────────────────────────────────
@@ -137,7 +156,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
 
     # ── Facteurs Clés de Succès ──
     _heading(doc, "Facteurs Clés de Succès", 1)
-    fcs_list = analysis.get("facteurs_cles_succes", [])
+    fcs_list = _safe_list(analysis.get("facteurs_cles_succes", []))
     for niveau in NIVEAUX_FCS_ORDER:
         items = [f for f in fcs_list if f.get("niveau") == niveau]
         if not items:
@@ -159,7 +178,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
     table = doc.add_table(rows=1, cols=4)
     table.style = "Table Grid"
     _table_header(table, ["Tendance", "Description", "Impact effectifs", "Fonctions"])
-    for item in analysis.get("tendances_dimensionnement", []):
+    for item in _safe_list(analysis.get("tendances_dimensionnement", [])):
         row = table.add_row().cells
         row[0].text = item.get("tendance", "") + _sources_str(item.get("sources", []))
         row[1].text = item.get("description", "")
@@ -173,7 +192,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
     table = doc.add_table(rows=1, cols=3)
     table.style = "Table Grid"
     _table_header(table, ["Pratique", "Description", "Maturité"])
-    for item in analysis.get("pratiques_gouvernance", []):
+    for item in _safe_list(analysis.get("pratiques_gouvernance", [])):
         row = table.add_row().cells
         row[0].text = item.get("pratique", "") + _sources_str(item.get("sources", []))
         row[1].text = item.get("description", "")
@@ -186,7 +205,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
     table = doc.add_table(rows=1, cols=3)
     table.style = "Table Grid"
     _table_header(table, ["Pratique", "Description", "Adoption"])
-    for item in analysis.get("gestion_performance", []):
+    for item in _safe_list(analysis.get("gestion_performance", [])):
         row = table.add_row().cells
         row[0].text = item.get("pratique", "") + _sources_str(item.get("sources", []))
         row[1].text = item.get("description", "")
@@ -199,7 +218,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
     table = doc.add_table(rows=1, cols=3)
     table.style = "Table Grid"
     _table_header(table, ["Domaine", "Tendance", "Direction"])
-    for item in analysis.get("externalisation_partenariats", []):
+    for item in _safe_list(analysis.get("externalisation_partenariats", [])):
         row = table.add_row().cells
         row[0].text = item.get("domaine", "") + _sources_str(item.get("sources", []))
         row[1].text = item.get("tendance", "")
@@ -212,7 +231,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
     table = doc.add_table(rows=1, cols=3)
     table.style = "Table Grid"
     _table_header(table, ["Axe", "Description", "Engagement"])
-    for item in analysis.get("rse_ethique", []):
+    for item in _safe_list(analysis.get("rse_ethique", [])):
         row = table.add_row().cells
         row[0].text = item.get("axe", "") + _sources_str(item.get("sources", []))
         row[1].text = item.get("description", "")
@@ -222,7 +241,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
 
     # ── Signaux faibles ──
     _heading(doc, "Signaux Faibles & Disruptions Émergentes", 1)
-    for sf in analysis.get("signaux_faibles", []):
+    for sf in _safe_list(analysis.get("signaux_faibles", [])):
         p = doc.add_paragraph(style="List Bullet")
         p.add_run(sf.get("signal", "") + _sources_str(sf.get("sources", []))).bold = True
         doc.add_paragraph(
@@ -266,7 +285,7 @@ def generate_docx(analysis: Dict[str, Any], output_path: str) -> str:
     table = doc.add_table(rows=1, cols=5)
     table.style = "Table Grid"
     _table_header(table, ["Action", "Justification", "Type", "Priorité", "Horizon"])
-    for r in analysis.get("recommandations", []):
+    for r in _safe_list(analysis.get("recommandations", [])):
         row = table.add_row().cells
         row[0].text = r.get("action", "") + _sources_str(r.get("sources", []))
         row[1].text = r.get("justification", "")
