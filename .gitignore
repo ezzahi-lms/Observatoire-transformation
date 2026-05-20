@@ -10,6 +10,9 @@ reports/
 # Exception : le template HTML (pas un rapport généré)
 !templates/*.html
 
+# ── Fichiers tmp analyse (reprise après interruption réseau) ─────────────────
+.tmp_*.json
+
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log
 streamlit_startup*.log

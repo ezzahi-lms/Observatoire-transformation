@@ -7,9 +7,11 @@ Trois appels enchaînés pour contourner la limite de 8 192 tokens :
               (avec angle_mission conseil)
   - Appel C : dimension Afrique/MENA, questions clients, index des sources
 """
+import json
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Any
 
 import anthropic
@@ -527,11 +529,48 @@ def _call_claude(client, model, max_tokens, system_cached, tool, tool_name, user
     raise RuntimeError(f"Claude n'a pas retourné de résultat pour {tool_name}.")
 
 
+def _tmp_path(reports_dir: Path, sector_key: str, part: str) -> Path:
+    """Chemin du fichier temporaire pour une partie de l'analyse."""
+    safe = "".join(c if c.isalnum() else "_" for c in sector_key)
+    return reports_dir / f".tmp_{safe}_{part}.json"
+
+
+def _save_tmp(path: Path, data: dict) -> None:
+    try:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        logger.info(f"Sauvegarde tmp → {path.name}")
+    except Exception as e:
+        logger.warning(f"Impossible de sauvegarder tmp {path.name} : {e}")
+
+
+def _load_tmp(path: Path) -> dict | None:
+    try:
+        if path.exists():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            logger.info(f"Reprise depuis tmp existant → {path.name}")
+            return data
+    except Exception as e:
+        logger.warning(f"tmp {path.name} illisible, on recalcule : {e}")
+    return None
+
+
+def _clear_tmp(paths: list) -> None:
+    for p in paths:
+        try:
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
+
+
 def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
             progress_callback=None) -> Dict[str, Any]:
     """
     Lance l'analyse en 3 appels Claude.
     progress_callback(step: int, total: int, msg: str) — appelé après chaque appel Claude.
+    Chaque partie est sauvegardée dans un fichier .tmp_<sector>_part_X.json après son
+    calcul réussi. Si un tmp existe déjà (reprise après interruption réseau), il est
+    rechargé sans rappeler Claude. Les tmp sont supprimés à la fin.
     """
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -543,11 +582,19 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
     client = anthropic.Anthropic(api_key=api_key)
 
     sector_label = sector_config.get("label", "secteur")
+    sector_key   = sector_config.get("key", sector_label)
     period = datetime.now().strftime("%B %Y")
     context_note = sector_config.get("context_note", "")
     benchmark_axes = sector_config.get("benchmark_axes", sector_config.get("focus_areas", []))
     freshness = _compute_freshness(articles)
     articles_text = _format_articles(articles)
+
+    # Dossier tmp = dossier reports (créé si absent)
+    reports_dir = Path(settings.get("reporting", {}).get("output_dir", "reports"))
+    reports_dir.mkdir(exist_ok=True)
+    tmp_a = _tmp_path(reports_dir, sector_key, "part_a")
+    tmp_b = _tmp_path(reports_dir, sector_key, "part_b")
+    tmp_c = _tmp_path(reports_dir, sector_key, "part_c")
 
     axes_str = "\n".join(f"• {a}" for a in benchmark_axes)
     ctx = f"\n**Contexte :** {context_note}\n" if context_note else ""
@@ -564,67 +611,85 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
 **Sources (citer via [N]) :**
 {articles_text}"""
 
-    if progress_callback:
-        progress_callback(0, 3, "Appel 1/3 en cours — Synthèse, FCS, Dimensionnement, Gouvernance, Performance…")
+    # ── Part A ────────────────────────────────────────────────────────────────
+    part_a = _load_tmp(tmp_a)
+    if part_a is None:
+        if progress_callback:
+            progress_callback(0, 3, "Appel 1/3 en cours — Synthèse, FCS, Dimensionnement, Gouvernance, Performance…")
+        logger.info("Appel Claude Part A...")
+        prompt_a = (
+            base_prompt
+            + "\n\nUtilise `benchmark_part_a` pour les sections :\n"
+            "1. synthèse exécutive (avec les 3 lectures So What? : secteur / clients LMS / cabinet LMS ORH)\n"
+            "2. qualité des sources\n"
+            "3. facteurs clés de succès (tous niveaux)\n"
+            "4. tendances de dimensionnement\n"
+            "5. pratiques de gouvernance\n"
+            "6. gestion de la performance\n\n"
+            "⚠️ Les lectures_so_what dans synthese_executive sont OBLIGATOIRES — 3 angles distincts : "
+            "secteur, clients de LMS, cabinet LMS ORH."
+        )
+        part_a = _call_claude(client, model, max_tokens, SYSTEM_PROMPT,
+                              TOOL_PART_A, "benchmark_part_a", prompt_a)
+        _save_tmp(tmp_a, part_a)
+    else:
+        if progress_callback:
+            progress_callback(1, 3, "♻️ Part A rechargée depuis cache — Appel 2/3 en cours…")
 
-    logger.info("Appel Claude Part A (synthèse + So What?, qualité sources, FCS, dimensionnement, gouvernance, performance)...")
-    prompt_a = (
-        base_prompt
-        + "\n\nUtilise `benchmark_part_a` pour les sections :\n"
-        "1. synthèse exécutive (avec les 3 lectures So What? : secteur / clients LMS / cabinet LMS ORH)\n"
-        "2. qualité des sources\n"
-        "3. facteurs clés de succès (tous niveaux)\n"
-        "4. tendances de dimensionnement\n"
-        "5. pratiques de gouvernance\n"
-        "6. gestion de la performance\n\n"
-        "⚠️ Les lectures_so_what dans synthese_executive sont OBLIGATOIRES — 3 angles distincts : "
-        "secteur, clients de LMS, cabinet LMS ORH."
-    )
-    part_a = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_A, "benchmark_part_a", prompt_a)
+    # ── Part B ────────────────────────────────────────────────────────────────
+    part_b = _load_tmp(tmp_b)
+    if part_b is None:
+        if progress_callback:
+            progress_callback(1, 3, "✅ Appel 1/3 terminé — Appel 2/3 en cours — Externalisation, RSE, Signaux, Recommandations…")
+        logger.info("Appel Claude Part B...")
+        prompt_b = (
+            base_prompt
+            + "\n\nUtilise `benchmark_part_b` pour les sections :\n"
+            "1. externalisation & partenariats\n"
+            "2. RSE & éthique\n"
+            "3. signaux faibles\n"
+            "4. analyse prospective avec 3 scénarios (Optimiste / Central / Pessimiste)\n"
+            "5. recommandations stratégiques (5-8) — chacune DOIT avoir un `angle_mission` : "
+            "quelle mission concrète LMS ORH peut-il proposer en réponse à ce besoin ?"
+        )
+        part_b = _call_claude(client, model, max_tokens, SYSTEM_PROMPT,
+                              TOOL_PART_B, "benchmark_part_b", prompt_b)
+        _save_tmp(tmp_b, part_b)
+    else:
+        if progress_callback:
+            progress_callback(2, 3, "♻️ Part B rechargée depuis cache — Appel 3/3 en cours…")
 
-    if progress_callback:
-        progress_callback(1, 3, "✅ Appel 1/3 terminé — Appel 2/3 en cours — Externalisation, RSE, Signaux, Recommandations…")
-
-    logger.info("Appel Claude Part B (externalisation, RSE, signaux, prospective, recommandations + angle_mission)...")
-    prompt_b = (
-        base_prompt
-        + "\n\nUtilise `benchmark_part_b` pour les sections :\n"
-        "1. externalisation & partenariats\n"
-        "2. RSE & éthique\n"
-        "3. signaux faibles\n"
-        "4. analyse prospective avec 3 scénarios (Optimiste / Central / Pessimiste)\n"
-        "5. recommandations stratégiques (5-8) — chacune DOIT avoir un `angle_mission` : "
-        "quelle mission concrète LMS ORH peut-il proposer en réponse à ce besoin ?"
-    )
-    part_b = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_B, "benchmark_part_b", prompt_b)
-
-    if progress_callback:
-        progress_callback(2, 3, "✅ Appel 2/3 terminé — Appel 3/3 en cours — Afrique/MENA, Questions clients, Index sources…")
-
-    logger.info("Appel Claude Part C (dimension Afrique/MENA, questions clients, index sources)...")
-    prompt_c = (
-        base_prompt
-        + "\n\nUtilise `benchmark_part_c` pour les sections :\n"
-        "1. dimension Afrique/MENA : contexte régional, écarts vs pratiques internationales "
-        "(tableau axe / situation internationale / situation Afrique-MENA / gap à combler), "
-        "opportunités spécifiques pour les entreprises marocaines du secteur\n"
-        "2. questions clients — les 4 types de questions récurrentes que les clients posent à LMS ORH :\n"
-        "   • dimensionnement (taille équipes, ratios, structures)\n"
-        "   • gouvernance (décision, reporting, conformité)\n"
-        "   • externalisation (make-or-buy, hybrides)\n"
-        "   • systèmes d'information (SIRH, ERP, IA orga)\n"
-        "3. index_sources : liste TOUTES les sources citées via [N] dans l'ENSEMBLE du benchmark. "
-        "Pour chaque source citée, inclure id=N, titre, source, url, date, pertinence. "
-        "Un index vide ou incomplet rend le rapport inexploitable pour les décideurs.\n\n"
-        "⚠️ Dimension Afrique/MENA et questions_clients sont OBLIGATOIRES. "
-        "index_sources doit couvrir toutes les sources de ce benchmark."
-    )
-    part_c = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_C, "benchmark_part_c", prompt_c)
+    # ── Part C ────────────────────────────────────────────────────────────────
+    part_c = _load_tmp(tmp_c)
+    if part_c is None:
+        if progress_callback:
+            progress_callback(2, 3, "✅ Appel 2/3 terminé — Appel 3/3 en cours — Afrique/MENA, Questions clients, Index sources…")
+        logger.info("Appel Claude Part C...")
+        prompt_c = (
+            base_prompt
+            + "\n\nUtilise `benchmark_part_c` pour les sections :\n"
+            "1. dimension Afrique/MENA : contexte régional, écarts vs pratiques internationales "
+            "(tableau axe / situation internationale / situation Afrique-MENA / gap à combler), "
+            "opportunités spécifiques pour les entreprises marocaines du secteur\n"
+            "2. questions clients — les 4 types de questions récurrentes que les clients posent à LMS ORH :\n"
+            "   • dimensionnement (taille équipes, ratios, structures)\n"
+            "   • gouvernance (décision, reporting, conformité)\n"
+            "   • externalisation (make-or-buy, hybrides)\n"
+            "   • systèmes d'information (SIRH, ERP, IA orga)\n"
+            "3. index_sources : liste TOUTES les sources citées via [N] dans l'ENSEMBLE du benchmark. "
+            "Pour chaque source citée, inclure id=N, titre, source, url, date, pertinence. "
+            "Un index vide ou incomplet rend le rapport inexploitable pour les décideurs.\n\n"
+            "⚠️ Dimension Afrique/MENA et questions_clients sont OBLIGATOIRES. "
+            "index_sources doit couvrir toutes les sources de ce benchmark."
+        )
+        part_c = _call_claude(client, model, max_tokens, SYSTEM_PROMPT,
+                              TOOL_PART_C, "benchmark_part_c", prompt_c)
+        _save_tmp(tmp_c, part_c)
 
     if progress_callback:
         progress_callback(3, 3, "✅ Appel 3/3 terminé — Fusion et génération du rapport…")
 
-    # Fusion des 3 parties
+    # ── Fusion ────────────────────────────────────────────────────────────────
     result = {**part_a, **part_b, **part_c}
 
     # ── Reconstruction de l'index si Claude ne l'a pas rempli ─────────────────
@@ -639,5 +704,9 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
         "nb_sources_analysees": len(articles),
         "freshness": freshness,
     }
+
+    # ── Nettoyage des tmp ─────────────────────────────────────────────────────
+    _clear_tmp([tmp_a, tmp_b, tmp_c])
+
     logger.info("Benchmark complet — trois appels fusionnés avec succès.")
     return result

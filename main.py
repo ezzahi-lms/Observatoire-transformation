@@ -72,7 +72,7 @@ def run_pipeline(sector_key: str, settings: dict, sectors: dict) -> list[str]:
         available = ", ".join(sectors.keys())
         raise ValueError(f"Secteur '{sector_key}' introuvable. Disponibles : {available}")
 
-    sector_config = sectors[sector_key]
+    sector_config = {**sectors[sector_key], "key": sector_key}
     sector_label = sector_config.get("label", sector_key)
 
     print(f"\n{'='*60}")

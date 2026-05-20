@@ -256,7 +256,7 @@ with tab_analyse:
     st.markdown("---")
 
     if run_btn:
-        sector_config = sectors[selected]
+        sector_config = {**sectors[selected], "key": selected}  # injecte la clé YAML pour les tmp
         run_settings = load_settings()
         if formats_selected:
             run_settings["reporting"]["formats"] = formats_selected
