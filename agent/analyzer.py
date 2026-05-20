@@ -527,7 +527,12 @@ def _call_claude(client, model, max_tokens, system_cached, tool, tool_name, user
     raise RuntimeError(f"Claude n'a pas retourné de résultat pour {tool_name}.")
 
 
-def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[str, Any]:
+def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
+            progress_callback=None) -> Dict[str, Any]:
+    """
+    Lance l'analyse en 3 appels Claude.
+    progress_callback(step: int, total: int, msg: str) — appelé après chaque appel Claude.
+    """
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise ValueError("ANTHROPIC_API_KEY manquant. Ajoutez votre clé dans le fichier .env.")
@@ -559,6 +564,9 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
 **Sources (citer via [N]) :**
 {articles_text}"""
 
+    if progress_callback:
+        progress_callback(0, 3, "Appel 1/3 en cours — Synthèse, FCS, Dimensionnement, Gouvernance, Performance…")
+
     logger.info("Appel Claude Part A (synthèse + So What?, qualité sources, FCS, dimensionnement, gouvernance, performance)...")
     prompt_a = (
         base_prompt
@@ -574,6 +582,9 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
     )
     part_a = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_A, "benchmark_part_a", prompt_a)
 
+    if progress_callback:
+        progress_callback(1, 3, "✅ Appel 1/3 terminé — Appel 2/3 en cours — Externalisation, RSE, Signaux, Recommandations…")
+
     logger.info("Appel Claude Part B (externalisation, RSE, signaux, prospective, recommandations + angle_mission)...")
     prompt_b = (
         base_prompt
@@ -586,6 +597,9 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
         "quelle mission concrète LMS ORH peut-il proposer en réponse à ce besoin ?"
     )
     part_b = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_B, "benchmark_part_b", prompt_b)
+
+    if progress_callback:
+        progress_callback(2, 3, "✅ Appel 2/3 terminé — Appel 3/3 en cours — Afrique/MENA, Questions clients, Index sources…")
 
     logger.info("Appel Claude Part C (dimension Afrique/MENA, questions clients, index sources)...")
     prompt_c = (
@@ -606,6 +620,9 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict) -> Dict[s
         "index_sources doit couvrir toutes les sources de ce benchmark."
     )
     part_c = _call_claude(client, model, max_tokens, SYSTEM_PROMPT, TOOL_PART_C, "benchmark_part_c", prompt_c)
+
+    if progress_callback:
+        progress_callback(3, 3, "✅ Appel 3/3 terminé — Fusion et génération du rapport…")
 
     # Fusion des 3 parties
     result = {**part_a, **part_b, **part_c}

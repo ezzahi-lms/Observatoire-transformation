@@ -274,10 +274,15 @@ with tab_analyse:
                 st.error(f"Erreur lors de la collecte : {e}")
                 st.stop()
 
-            st.write("🧠 **Étape 2/3** — Benchmark avec Claude (2 appels)…")
+            st.write("🧠 **Étape 2/3** — Benchmark avec Claude (3 appels, ~5-6 min)…")
+            _step_placeholder = st.empty()
+            def _progress(step, total, msg):
+                _step_placeholder.caption(f"  ↳ {msg}")
             try:
                 from agent import analyzer as ana_module
-                analysis = ana_module.analyze(sector_config, articles, run_settings)
+                analysis = ana_module.analyze(sector_config, articles, run_settings,
+                                              progress_callback=_progress)
+                _step_placeholder.empty()
                 nb_fcs  = len(analysis.get("facteurs_cles_succes", []))
                 nb_sig  = len(analysis.get("signaux_faibles", []))
                 nb_rec  = len(analysis.get("recommandations", []))
