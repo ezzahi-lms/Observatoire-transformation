@@ -417,10 +417,11 @@ with tab_mission:
             "slides_optionnelles": slides_cochees,
         }
 
-        # Récupérer le secteur existant le plus proche pour la collecte
+        # Réinitialiser les résultats précédents
+        st.session_state.pop("mission_result", None)
+
         settings_m = load_settings()
         sectors_m = load_sectors()
-        # Mapping simple secteur mission → secteur YAML
         secteur_map = {
             "Pharma": "pharma_maroc", "Banque": "banque_finance",
             "Industrie": "industrie", "Santé": "sante",
@@ -446,9 +447,6 @@ with tab_mission:
             _ph = st.empty()
             def _prog_m(step, total, msg): _ph.caption(f"  ↳ {msg}")
             try:
-                import importlib, sys
-                if "agent.analyzer_mission" in sys.modules:
-                    del sys.modules["agent.analyzer_mission"]
                 from agent import analyzer_mission as am
                 analysis_m = am.analyze_mission(mission_config, articles_m, settings_m, _prog_m)
                 _ph.empty()
@@ -467,7 +465,19 @@ with tab_mission:
                 ppt_name = f"Benchmark_LMS_{entreprise_cible.replace(' ', '_')}_{_dt.now().strftime('%Y-%m-%d')}.pptx"
                 ppt_path = str(ROOT / "reports" / ppt_name)
                 pptgen.generate_lms_ppt(analysis_m, mission_config, ppt_path)
+                # Sauvegarder JSON mission
+                import json as _json
+                json_m_path = ppt_path.replace(".pptx", ".json")
+                with open(json_m_path, "w", encoding="utf-8") as fp:
+                    _json.dump({**analysis_m, "_mission_config": mission_config}, fp, ensure_ascii=False, indent=2)
                 st.write(f"  📊 `{ppt_name}`")
+                # Stocker dans session_state pour survivre au rerun
+                st.session_state["mission_result"] = {
+                    "ppt_path": ppt_path,
+                    "ppt_name": ppt_name,
+                    "json_path": json_m_path,
+                    "nb_slides_opt": len(slides_cochees),
+                }
             except ImportError:
                 status_m.update(label="❌ python-pptx manquant", state="error")
                 st.error("python-pptx non installé. Exécutez : pip install python-pptx")
@@ -480,31 +490,28 @@ with tab_mission:
 
             status_m.update(label="✅ Benchmark mission généré !", state="complete")
 
-        # Téléchargement
-        st.success(f"✅ Présentation générée — 7 slides fixes + {len(slides_cochees)} slide(s) optionnelle(s) = {7 + len(slides_cochees)} slides au total")
-
+    # ── Boutons téléchargement (persistent via session_state) ─────────────────
+    if "mission_result" in st.session_state:
+        res = st.session_state["mission_result"]
+        nb_opt = res["nb_slides_opt"]
+        st.success(f"✅ Présentation générée — 7 slides fixes + {nb_opt} slide(s) optionnelle(s) = {7 + nb_opt} slides au total")
         dl_cols = st.columns(2)
         with dl_cols[0]:
-            with open(ppt_path, "rb") as fp:
+            with open(res["ppt_path"], "rb") as fp:
                 st.download_button(
                     "📊 Télécharger le PPT LMS",
                     data=fp.read(),
-                    file_name=ppt_name,
+                    file_name=res["ppt_name"],
                     mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
                     use_container_width=True,
                     type="primary",
                 )
-        # Sauvegarder JSON mission
-        import json as _json
-        json_m_path = str(ROOT / "reports" / ppt_name.replace(".pptx", ".json"))
-        with open(json_m_path, "w", encoding="utf-8") as fp:
-            _json.dump({**analysis_m, "_mission_config": mission_config}, fp, ensure_ascii=False, indent=2)
         with dl_cols[1]:
-            with open(json_m_path, "rb") as fp:
+            with open(res["json_path"], "rb") as fp:
                 st.download_button(
                     "📋 Données JSON",
                     data=fp.read(),
-                    file_name=ppt_name.replace(".pptx", ".json"),
+                    file_name=res["ppt_name"].replace(".pptx", ".json"),
                     mime="application/json",
                     use_container_width=True,
                 )
