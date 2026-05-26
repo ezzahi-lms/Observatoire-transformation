@@ -189,16 +189,18 @@ with st.sidebar:
 
 # Onglet admin uniquement si rôle admin
 if user_role == "admin":
-    tab_analyse, tab_reports, tab_planning, tab_config, tab_admin = st.tabs([
+    tab_analyse, tab_mission, tab_reports, tab_planning, tab_config, tab_admin = st.tabs([
         "🚀 Nouvelle analyse",
+        "🎯 Benchmark Mission",
         "📂 Rapports",
         "📅 Planification",
         "⚙️ Paramètres",
         "👥 Utilisateurs",
     ])
 else:
-    tab_analyse, tab_reports, tab_planning, tab_config = st.tabs([
+    tab_analyse, tab_mission, tab_reports, tab_planning, tab_config = st.tabs([
         "🚀 Nouvelle analyse",
+        "🎯 Benchmark Mission",
         "📂 Rapports",
         "📅 Planification",
         "⚙️ Paramètres",
@@ -333,7 +335,183 @@ with tab_analyse:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ONGLET 2 — RAPPORTS
+# ONGLET 2 — BENCHMARK MISSION
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_mission:
+    st.header("🎯 Benchmark Mission — Consultant RH")
+    st.caption("Générez un benchmark stratégique personnalisé pour votre mission, livré en PPT LMS.")
+
+    # ── Formulaire de configuration ──
+    with st.form("form_mission"):
+        st.subheader("Configuration de la mission")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            nom_mission = st.text_input("Nom de la mission *", placeholder="Ex: Diagnostic RH — Groupe Saham")
+            entreprise_cible = st.text_input("Entreprise / Acteur cible *", placeholder="Ex: Saham Group")
+            secteur_mission = st.selectbox("Secteur d'activité *",
+                ["Assurance", "Banque", "Pharma", "Retail", "Industrie",
+                 "Énergie", "Santé", "Telecom", "Agroalimentaire", "Autre"])
+        with col2:
+            mode_analyse = st.radio("Mode d'analyse", ["Rapide (~2 min)", "Approfondi (~6 min)"], horizontal=True)
+            periode = st.selectbox("Période d'analyse",
+                ["3 derniers mois", "6 derniers mois", "12 derniers mois", "24 derniers mois"],
+                index=1)
+
+        angle_strategique = st.text_area(
+            "Angle stratégique RH *",
+            placeholder="Ex: Comment les assureurs marocains réorganisent-ils leurs équipes RH face à la digitalisation ?",
+            max_chars=500, height=100
+        )
+
+        st.markdown("**Sources prioritaires** (optionnel)")
+        src_cols = st.columns(3)
+        sources_cochees = []
+        sources_dispo = [
+            ("presse_sectorielle", "Presse sectorielle"),
+            ("publications_academiques", "Publications & études"),
+            ("rapports_annuels", "Rapports annuels"),
+            ("linkedin", "LinkedIn & réseaux pro"),
+            ("offres_emploi", "Offres d'emploi"),
+            ("sources_arabophones", "Sources arabophones"),
+        ]
+        for i, (key, label) in enumerate(sources_dispo):
+            with src_cols[i % 3]:
+                if st.checkbox(label, key=f"src_{key}"):
+                    sources_cochees.append(key)
+
+        st.markdown("**Slides thématiques optionnelles**")
+        sl_cols = st.columns(4)
+        slides_cochees = []
+        slides_dispo = [
+            ("effectifs_dimensionnement", "Effectifs & dimensionnement"),
+            ("recrutement_talent", "Recrutement & talent"),
+            ("formation_competences", "Formation & compétences"),
+            ("culture_engagement", "Culture & engagement"),
+            ("remuneration_social", "Rémunération & social"),
+            ("sirh_digitalisation", "SIRH & digitalisation RH"),
+            ("diversite_inclusion", "Diversité & inclusion"),
+            ("relations_sociales", "Relations sociales"),
+        ]
+        for i, (key, label) in enumerate(slides_dispo):
+            with sl_cols[i % 4]:
+                if st.checkbox(label, key=f"sl_{key}"):
+                    slides_cochees.append(key)
+
+        submitted = st.form_submit_button("▶ Générer le benchmark mission", type="primary", use_container_width=True)
+
+    if submitted:
+        # Validation
+        if not nom_mission or not entreprise_cible or not angle_strategique:
+            st.error("⚠️ Les champs Nom de la mission, Entreprise cible et Angle stratégique RH sont obligatoires.")
+            st.stop()
+
+        mission_config = {
+            "nom_mission": nom_mission,
+            "entreprise_cible": entreprise_cible,
+            "secteur": secteur_mission,
+            "angle_strategique_rh": angle_strategique,
+            "periode": periode,
+            "mode": "Rapide" if "Rapide" in mode_analyse else "Approfondi",
+            "sources": sources_cochees,
+            "slides_optionnelles": slides_cochees,
+        }
+
+        # Récupérer le secteur existant le plus proche pour la collecte
+        settings_m = load_settings()
+        sectors_m = load_sectors()
+        # Mapping simple secteur mission → secteur YAML
+        secteur_map = {
+            "Pharma": "pharma_maroc", "Banque": "banque_finance",
+            "Industrie": "industrie", "Santé": "sante",
+            "Telecom": "telecom_maroc", "Agroalimentaire": "agroalimentaire_maroc",
+            "Retail": "distribution_maroc",
+        }
+        sector_key_m = secteur_map.get(secteur_mission, list(sectors_m.keys())[0])
+        sector_config_m = {**sectors_m[sector_key_m], "key": sector_key_m}
+
+        with st.status("⏳ Génération du benchmark mission…", expanded=True) as status_m:
+
+            st.write("🔎 **Étape 1/3** — Collecte des sources…")
+            try:
+                from agent import collector as col_m
+                articles_m = col_m.collect(sector_config_m, settings_m)
+                st.write(f"✅ **{len(articles_m)} articles collectés**")
+            except Exception as e:
+                status_m.update(label="❌ Erreur collecte", state="error")
+                st.error(f"Erreur collecte : {e}")
+                st.stop()
+
+            st.write(f"🧠 **Étape 2/3** — Analyse Claude ({mission_config['mode']})…")
+            _ph = st.empty()
+            def _prog_m(step, total, msg): _ph.caption(f"  ↳ {msg}")
+            try:
+                import importlib, sys
+                if "agent.analyzer_mission" in sys.modules:
+                    del sys.modules["agent.analyzer_mission"]
+                from agent import analyzer_mission as am
+                analysis_m = am.analyze_mission(mission_config, articles_m, settings_m, _prog_m)
+                _ph.empty()
+                nb_rec_m = len(analysis_m.get("recommandations_mission", []))
+                st.write(f"✅ **Benchmark produit** — {nb_rec_m} recommandations · {len(analysis_m.get('signaux_faibles', []))} signaux")
+            except Exception as e:
+                status_m.update(label="❌ Erreur analyse", state="error")
+                st.error(f"Erreur analyse : {e}")
+                import traceback; st.code(traceback.format_exc())
+                st.stop()
+
+            st.write("📊 **Étape 3/3** — Génération PPT LMS…")
+            try:
+                import ppt_generator as pptgen
+                from datetime import datetime as _dt
+                ppt_name = f"Benchmark_LMS_{entreprise_cible.replace(' ', '_')}_{_dt.now().strftime('%Y-%m-%d')}.pptx"
+                ppt_path = str(ROOT / "reports" / ppt_name)
+                pptgen.generate_lms_ppt(analysis_m, mission_config, ppt_path)
+                st.write(f"  📊 `{ppt_name}`")
+            except ImportError:
+                status_m.update(label="❌ python-pptx manquant", state="error")
+                st.error("python-pptx non installé. Exécutez : pip install python-pptx")
+                st.stop()
+            except Exception as e:
+                status_m.update(label="❌ Erreur PPT", state="error")
+                st.error(f"Erreur génération PPT : {e}")
+                import traceback; st.code(traceback.format_exc())
+                st.stop()
+
+            status_m.update(label="✅ Benchmark mission généré !", state="complete")
+
+        # Téléchargement
+        st.success(f"✅ Présentation générée — 7 slides fixes + {len(slides_cochees)} slide(s) optionnelle(s) = {7 + len(slides_cochees)} slides au total")
+
+        dl_cols = st.columns(2)
+        with dl_cols[0]:
+            with open(ppt_path, "rb") as fp:
+                st.download_button(
+                    "📊 Télécharger le PPT LMS",
+                    data=fp.read(),
+                    file_name=ppt_name,
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    use_container_width=True,
+                    type="primary",
+                )
+        # Sauvegarder JSON mission
+        import json as _json
+        json_m_path = str(ROOT / "reports" / ppt_name.replace(".pptx", ".json"))
+        with open(json_m_path, "w", encoding="utf-8") as fp:
+            _json.dump({**analysis_m, "_mission_config": mission_config}, fp, ensure_ascii=False, indent=2)
+        with dl_cols[1]:
+            with open(json_m_path, "rb") as fp:
+                st.download_button(
+                    "📋 Données JSON",
+                    data=fp.read(),
+                    file_name=ppt_name.replace(".pptx", ".json"),
+                    mime="application/json",
+                    use_container_width=True,
+                )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ONGLET 3 — RAPPORTS
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_reports:
     st.header("Rapports générés")
