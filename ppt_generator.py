@@ -33,10 +33,20 @@ POLICE = "Arial"
 SLIDE_W = Cm(33.87)
 SLIDE_H = Cm(19.05)
 
-# Assets
+# Assets — cherche plusieurs variantes de noms de fichiers
 _HERE = Path(__file__).parent
-LOGO_PATH = _HERE / "assets" / "logo_lms.png"
-MOSAIC_PATH = _HERE / "assets" / "mosaic_lms.jpg"
+_ASSETS = _HERE / "assets"
+
+def _find_asset(*candidates) -> Path | None:
+    for name in candidates:
+        p = _ASSETS / name
+        if p.exists():
+            return p
+    return None
+
+LOGO_PATH   = _find_asset("logo_lms.png", "Logo LMS.png", "logo_lms.jpg", "Logo LMS.jpg")
+MOSAIC_PATH = _find_asset("mosaic_lms.jpg", "mosaic_lms.png", "photo mosaïque.png",
+                           "photo mosaique.png", "mosaic_lms.png")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -150,7 +160,10 @@ def _content_slide(prs, titre, col_gauche_text, col_droite_text, so_what_text,
 
     slide_layout = prs.slide_layouts[6]  # blank
     slide = prs.slides.add_slide(slide_layout)
-    slide.shapes._spTree.remove(slide.shapes._spTree[2])  # supprime placeholder titre
+    # Supprimer les placeholders résiduels s'il en existe (layout non strictement vide)
+    sp_tree = slide.shapes._spTree
+    if len(sp_tree) > 2:
+        sp_tree.remove(sp_tree[2])
 
     # Barre bordeaux haut
     barre_h = Cm(1.8)
@@ -226,7 +239,7 @@ def _slide_cover(prs, analysis, mission_config):
     rect_left = _add_rect(slide, Cm(0), Cm(0), panneau_w, SLIDE_H, fill_color=BORDEAUX)
 
     # Si mosaïque disponible, l'afficher par-dessus
-    if MOSAIC_PATH.exists():
+    if MOSAIC_PATH:
         try:
             slide.shapes.add_picture(
                 str(MOSAIC_PATH), Cm(0), Cm(0), panneau_w, SLIDE_H
@@ -277,7 +290,7 @@ def _slide_cover(prs, analysis, mission_config):
     )
 
     # Logo LMS si disponible
-    if LOGO_PATH.exists():
+    if LOGO_PATH:
         try:
             logo_w = Cm(4)
             logo_left = SLIDE_W - logo_w - Cm(0.5)
