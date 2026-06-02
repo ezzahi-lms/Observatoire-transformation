@@ -367,14 +367,10 @@ def _call_gemini(model_name: str, max_tokens: int, system_text: str,
     )
 
     schema = tool.get("input_schema", {})
-    schema_json = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
     combined_prompt = (
         f"{system_text}\n\n"
-        f"SCHÉMA JSON ATTENDU (respecter EXACTEMENT, tous les champs `required` obligatoires) :\n"
-        f"{schema_json}\n\n"
-        f"⚠️ CONCISION OBLIGATOIRE : chaque champ texte = 1-2 phrases max. "
-        f"Listes : 3-5 items max. Ne pas dépasser les tokens disponibles.\n\n"
+        f"⚠️ CONCISION : chaque champ texte = 1-2 phrases max. Listes : 3-5 items max.\n\n"
         f"{user_prompt}"
     )
 
@@ -383,6 +379,7 @@ def _call_gemini(model_name: str, max_tokens: int, system_text: str,
         contents=combined_prompt,
         config=genai_types.GenerateContentConfig(
             response_mime_type="application/json",
+            response_schema=schema,
             max_output_tokens=max_tokens,
             temperature=0.3,
         ),
