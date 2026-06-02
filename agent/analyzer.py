@@ -557,17 +557,16 @@ def _call_gemini(model_name: str, max_tokens: int, system_text: str,
         http_options={"api_version": "v1beta"},
     )
 
-    # Embed le schéma JSON dans le prompt pour guider la structure de sortie
+    # Embed le schéma JSON dans le prompt — version compacte (sans indent) pour économiser les tokens
     schema = tool.get("input_schema", {})
-    schema_json = json.dumps(schema, ensure_ascii=False, indent=2)
+    schema_json = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
     combined_prompt = (
         f"{system_text}\n\n"
-        f"═══ SCHÉMA JSON DE SORTIE ATTENDU ═══\n"
-        f"Réponds UNIQUEMENT avec un objet JSON valide respectant EXACTEMENT "
-        f"cette structure (tous les champs `required` sont obligatoires) :\n"
-        f"{schema_json}\n"
-        f"═══════════════════════════════════════\n\n"
+        f"SCHÉMA JSON ATTENDU (respecter EXACTEMENT, tous les champs `required` obligatoires) :\n"
+        f"{schema_json}\n\n"
+        f"⚠️ CONCISION OBLIGATOIRE : chaque champ texte = 1-2 phrases max. "
+        f"Listes : 3-5 items max. Ne pas dépasser les tokens disponibles.\n\n"
         f"{user_prompt}"
     )
 
@@ -656,7 +655,10 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
         or analysis_cfg.get("provider", "anthropic")
     ).lower()
 
-    max_tokens = analysis_cfg.get("max_tokens", 8192)
+    if provider == "gemini":
+        max_tokens = analysis_cfg.get("gemini_max_tokens", 4096)
+    else:
+        max_tokens = analysis_cfg.get("max_tokens", 8192)
     client = None
 
     if provider == "gemini":

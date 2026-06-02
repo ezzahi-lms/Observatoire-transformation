@@ -367,15 +367,14 @@ def _call_gemini(model_name: str, max_tokens: int, system_text: str,
     )
 
     schema = tool.get("input_schema", {})
-    schema_json = json.dumps(schema, ensure_ascii=False, indent=2)
+    schema_json = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
     combined_prompt = (
         f"{system_text}\n\n"
-        f"═══ SCHÉMA JSON DE SORTIE ATTENDU ═══\n"
-        f"Réponds UNIQUEMENT avec un objet JSON valide respectant EXACTEMENT "
-        f"cette structure (tous les champs `required` sont obligatoires) :\n"
-        f"{schema_json}\n"
-        f"═══════════════════════════════════════\n\n"
+        f"SCHÉMA JSON ATTENDU (respecter EXACTEMENT, tous les champs `required` obligatoires) :\n"
+        f"{schema_json}\n\n"
+        f"⚠️ CONCISION OBLIGATOIRE : chaque champ texte = 1-2 phrases max. "
+        f"Listes : 3-5 items max. Ne pas dépasser les tokens disponibles.\n\n"
         f"{user_prompt}"
     )
 
@@ -525,7 +524,7 @@ Période couverte : {periode}
     #  MODE RAPIDE : 1 appel
     # ─────────────────────────────────────────────────────────────────────────
     if mode == "Rapide":
-        max_tokens = 4096
+        max_tokens = analysis_cfg.get("gemini_max_tokens", 4096) if provider == "gemini" else 4096
         tmp = _tmp_path(reports_dir, entreprise_cible, "rapide")
         result = _load_tmp(tmp)
         if result is None:
@@ -560,7 +559,7 @@ Période couverte : {periode}
     # ─────────────────────────────────────────────────────────────────────────
     #  MODE APPROFONDI : 3 appels
     # ─────────────────────────────────────────────────────────────────────────
-    max_tokens = 8192
+    max_tokens = analysis_cfg.get("gemini_max_tokens", 4096) if provider == "gemini" else 8192
     tmp_a = _tmp_path(reports_dir, entreprise_cible, "part_a")
     tmp_b = _tmp_path(reports_dir, entreprise_cible, "part_b")
     tmp_c = _tmp_path(reports_dir, entreprise_cible, "part_c")
