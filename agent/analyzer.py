@@ -552,7 +552,10 @@ def _call_gemini(model_name: str, max_tokens: int, system_text: str,
             "(obtenir sur https://aistudio.google.com/app/apikey)."
         )
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(
+        api_key=api_key,
+        http_options={"api_version": "v1beta"},
+    )
 
     # Embed le schéma JSON dans le prompt pour guider la structure de sortie
     schema = tool.get("input_schema", {})
