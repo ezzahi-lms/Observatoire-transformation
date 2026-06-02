@@ -302,7 +302,7 @@ def _build_tool_part_c(slides_optionnelles: List[str]) -> Dict:
 #  HELPERS (calqués sur analyzer.py)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _format_articles(articles: List[Dict]) -> str:
+def _format_articles(articles: List[Dict], summary_len: int = 400) -> str:
     lines = [f"## {len(articles)} sources numérotées — citer via [N]\n"]
     for i, a in enumerate(articles, 1):
         date = a.get("date", "N/A")
@@ -315,7 +315,7 @@ def _format_articles(articles: List[Dict]) -> str:
                 pass
         lines.append(f"[{i}] {a['source']} {date}{age} | {a['title']}")
         if a.get("summary"):
-            lines.append(f"     {a['summary'][:400]}")
+            lines.append(f"     {a['summary'][:summary_len]}")
         lines.append("")
     return "\n".join(lines)
 
@@ -505,7 +505,16 @@ def analyze_mission(
         angle_strategique_rh=angle,
     )
 
-    articles_text = _format_articles(articles)
+    # Pour Gemini free tier : limiter articles et longueur des résumés
+    articles_for_llm = articles
+    summary_len = 400
+    if provider == "gemini":
+        max_art = analysis_cfg.get("gemini_max_articles", 12)
+        summary_len = analysis_cfg.get("gemini_summary_len", 150)
+        articles_for_llm = articles[:max_art]
+        logger.info(f"Gemini mission : {len(articles_for_llm)}/{len(articles)} articles")
+
+    articles_text = _format_articles(articles_for_llm, summary_len=summary_len)
     reports_dir = Path(settings.get("reporting", {}).get("output_dir", "reports"))
     reports_dir.mkdir(exist_ok=True)
 

@@ -442,7 +442,7 @@ def _compute_freshness(articles: List[Dict]) -> Dict:
             "pct_recent": round(recent / total * 100) if total else 0}
 
 
-def _format_articles(articles: List[Dict]) -> str:
+def _format_articles(articles: List[Dict], summary_len: int = 400) -> str:
     lines = [f"## {len(articles)} sources numérotées — citer via [N]\n"]
     for i, a in enumerate(articles, 1):
         date = a.get("date", "N/A")
@@ -455,7 +455,7 @@ def _format_articles(articles: List[Dict]) -> str:
                 pass
         lines.append(f"[{i}] {a['source']} {date}{age} | {a['title']}")
         if a.get("summary"):
-            lines.append(f"     {a['summary'][:400]}")
+            lines.append(f"     {a['summary'][:summary_len]}")
         lines.append("")
     return "\n".join(lines)
 
@@ -685,7 +685,17 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
     context_note = sector_config.get("context_note", "")
     benchmark_axes = sector_config.get("benchmark_axes", sector_config.get("focus_areas", []))
     freshness = _compute_freshness(articles)
-    articles_text = _format_articles(articles)
+
+    # Pour Gemini free tier : limiter le nombre d'articles et la longueur des résumés
+    articles_for_llm = articles
+    summary_len = 400
+    if provider == "gemini":
+        max_art = analysis_cfg.get("gemini_max_articles", 12)
+        summary_len = analysis_cfg.get("gemini_summary_len", 150)
+        articles_for_llm = articles[:max_art]
+        logger.info(f"Gemini : {len(articles_for_llm)}/{len(articles)} articles, résumés ≤{summary_len} chars")
+
+    articles_text = _format_articles(articles_for_llm, summary_len=summary_len)
 
     # Dossier tmp = dossier reports (créé si absent)
     reports_dir = Path(settings.get("reporting", {}).get("output_dir", "reports"))
