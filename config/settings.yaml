@@ -9,7 +9,7 @@ collection:
 analysis:
   provider: gemini                  # anthropic | gemini
   model: claude-sonnet-4-6          # Modèle Anthropic (si provider=anthropic)
-  gemini_model: gemini-2.0-flash    # Modèle Gemini  (si provider=gemini — free tier)
+  gemini_model: gemini-2.5-flash    # Modèle Gemini  (si provider=gemini — free tier)
   max_tokens: 8192
   temperature: 0.3
 reporting:
