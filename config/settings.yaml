@@ -1,32 +1,29 @@
 agent:
-  name: "Observatoire Transformation"
-  version: "1.1.0"
-  default_sector: "pharma_maroc"
-
+  name: Observatoire Transformation
+  version: 1.1.0
+  default_sector: pharma_maroc
 collection:
-  days_back: 35           # Jours en arrière pour la collecte RSS
-  max_search_results: 8   # Résultats max par requête DuckDuckGo
-  max_articles_total: 60  # Articles max envoyés à l'analyse
-
+  days_back: 35
+  max_search_results: 15
+  max_articles_total: 60
 analysis:
-  model: "claude-sonnet-4-6"
+  provider: gemini                  # anthropic | gemini
+  model: claude-sonnet-4-6          # Modèle Anthropic (si provider=anthropic)
+  gemini_model: gemini-1.5-flash    # Modèle Gemini  (si provider=gemini — free tier)
   max_tokens: 8192
-  temperature: 0.3        # Bas pour analyses factuelles
-
+  temperature: 0.3
 reporting:
-  formats:                # Formats activés : docx, html, pdf
-    - docx
-    - html
-  output_dir: "reports"
-  filename_pattern: "veille_{sector}_{date}"  # {sector} et {date} remplacés auto
-
+  formats:
+  - docx
+  - html
+  output_dir: reports
+  filename_pattern: veille_{sector}_{date}
 scheduling:
   enabled: true
-  frequency: "monthly"   # monthly | weekly
-  day_of_month: 1        # Jour du mois (1 = 1er du mois)
-  hour: 8                # Heure d'exécution (format 24h)
+  frequency: monthly
+  day_of_month: 1
+  hour: 8
   minute: 0
-
 logging:
-  level: "INFO"
-  file: "reports/agent.log"
+  level: INFO
+  file: reports/agent.log

@@ -11,9 +11,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Callable
 
-import anthropic
-
 logger = logging.getLogger(__name__)
+
+# Anthropic et Google Generative AI sont importés en lazy dans leurs fonctions d'appel
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SYSTEM PROMPT (dynamique — formaté à l'appel)
@@ -320,7 +320,9 @@ def _format_articles(articles: List[Dict]) -> str:
     return "\n".join(lines)
 
 
-def _call_claude(client, model, max_tokens, system_text, tool, tool_name, user_prompt):
+def _call_anthropic(client, model: str, max_tokens: int, system_text: str,
+                    tool: dict, tool_name: str, user_prompt: str) -> dict:
+    """Appel Anthropic avec tool_use pour sortie JSON structurée."""
     resp = client.messages.create(
         model=model,
         max_tokens=max_tokens,
@@ -332,11 +334,81 @@ def _call_claude(client, model, max_tokens, system_text, tool, tool_name, user_p
     for block in resp.content:
         if block.type == "tool_use" and block.name == tool_name:
             logger.info(
-                f"{tool_name} — {resp.usage.input_tokens} in / {resp.usage.output_tokens} out "
+                f"{tool_name} (Anthropic) — {resp.usage.input_tokens} in / "
+                f"{resp.usage.output_tokens} out "
                 f"(cache: {getattr(resp.usage, 'cache_read_input_tokens', 0)})"
             )
             return block.input
-    raise RuntimeError(f"Claude n'a pas retourné de résultat pour {tool_name}.")
+    raise RuntimeError(f"Anthropic n'a pas retourné de résultat pour {tool_name}.")
+
+
+def _call_gemini(model_name: str, max_tokens: int, system_text: str,
+                 tool: dict, tool_name: str, user_prompt: str) -> dict:
+    """Appel Google Gemini avec JSON mode (google-genai SDK v2+)."""
+    try:
+        from google import genai
+        from google.genai import types as genai_types
+    except ImportError:
+        raise ImportError(
+            "google-genai non installé. "
+            "Exécuter : pip install google-genai>=1.0.0"
+        )
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "GEMINI_API_KEY manquant. Ajoutez GEMINI_API_KEY dans le fichier .env "
+            "(obtenir sur https://aistudio.google.com/app/apikey)."
+        )
+
+    client = genai.Client(api_key=api_key)
+
+    schema = tool.get("input_schema", {})
+    schema_json = json.dumps(schema, ensure_ascii=False, indent=2)
+
+    combined_prompt = (
+        f"{system_text}\n\n"
+        f"═══ SCHÉMA JSON DE SORTIE ATTENDU ═══\n"
+        f"Réponds UNIQUEMENT avec un objet JSON valide respectant EXACTEMENT "
+        f"cette structure (tous les champs `required` sont obligatoires) :\n"
+        f"{schema_json}\n"
+        f"═══════════════════════════════════════\n\n"
+        f"{user_prompt}"
+    )
+
+    response = client.models.generate_content(
+        model=model_name,
+        contents=combined_prompt,
+        config=genai_types.GenerateContentConfig(
+            response_mime_type="application/json",
+            max_output_tokens=max_tokens,
+            temperature=0.3,
+        ),
+    )
+
+    raw = response.text.strip()
+
+    if raw.startswith("```"):
+        raw = raw.split("```", 2)[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.rsplit("```", 1)[0].strip()
+
+    result = json.loads(raw)
+    logger.info(f"{tool_name} (Gemini/{model_name}) — réponse JSON reçue")
+    return result
+
+
+def _call_llm(provider: str, model: str, max_tokens: int, system_text: str,
+              tool: dict, tool_name: str, user_prompt: str,
+              client=None) -> dict:
+    """Dispatcher : appelle Anthropic ou Gemini selon le provider."""
+    if provider == "gemini":
+        return _call_gemini(model, max_tokens, system_text, tool, tool_name, user_prompt)
+    else:
+        if client is None:
+            raise ValueError("client Anthropic requis pour provider='anthropic'.")
+        return _call_anthropic(client, model, max_tokens, system_text, tool, tool_name, user_prompt)
 
 
 def _tmp_path(reports_dir: Path, entreprise: str, part: str) -> Path:
@@ -391,15 +463,33 @@ def analyze_mission(
 
     progress_callback(step, total, msg) — appelé après chaque étape Claude.
     """
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY manquant. Ajoutez votre clé dans le fichier .env.")
+    analysis_cfg = settings.get("analysis", {})
+    provider = (
+        os.environ.get("LLM_PROVIDER")
+        or analysis_cfg.get("provider", "anthropic")
+    ).lower()
 
-    model = (
-        os.environ.get("CLAUDE_MODEL")
-        or settings.get("analysis", {}).get("model", "claude-sonnet-4-6")
-    )
-    client = anthropic.Anthropic(api_key=api_key)
+    client = None
+    if provider == "gemini":
+        model = (
+            os.environ.get("GEMINI_MODEL")
+            or analysis_cfg.get("gemini_model", "gemini-1.5-flash")
+        )
+        logger.info(f"Provider : Gemini — modèle : {model}")
+    else:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY manquant. Ajoutez votre clé dans le fichier .env.")
+        model = (
+            os.environ.get("CLAUDE_MODEL")
+            or analysis_cfg.get("model", "claude-sonnet-4-6")
+        )
+        try:
+            import anthropic as _ant
+        except ImportError:
+            raise ImportError("anthropic non installé. Exécuter : pip install anthropic>=0.40.0")
+        client = _ant.Anthropic(api_key=api_key)
+        logger.info(f"Provider : Anthropic — modèle : {model}")
 
     nom_mission = mission_config.get("nom_mission", "Mission RH")
     entreprise_cible = mission_config.get("entreprise_cible", "Entreprise")
@@ -437,16 +527,16 @@ Période couverte : {periode}
         result = _load_tmp(tmp)
         if result is None:
             if progress_callback:
-                progress_callback(0, 1, "Appel Claude unique — Mode Rapide…")
+                progress_callback(0, 1, f"Appel {provider.title()} unique — Mode Rapide…")
             prompt = (
                 base_prompt
                 + "\n\nUtilise `mission_benchmark` pour produire le benchmark complet en un seul appel : "
                 "contexte_mission, business_model_rh, organisation_dimensionnement, gouvernance_rh, "
                 "innovation_manageriale, signaux_faibles (max 3), recommandations_mission (exactement 3)."
             )
-            result = _call_claude(
-                client, model, max_tokens, system_text,
-                TOOL_MISSION_RAPIDE, "mission_benchmark", prompt,
+            result = _call_llm(
+                provider, model, max_tokens, system_text,
+                TOOL_MISSION_RAPIDE, "mission_benchmark", prompt, client,
             )
             _save_tmp(tmp, result)
 
@@ -454,7 +544,7 @@ Période couverte : {periode}
             progress_callback(1, 1, "Benchmark Rapide généré.")
 
         result["_meta"] = {
-            "model": model,
+            "provider": provider, "model": model,
             "mode": "Rapide",
             "mission": nom_mission,
             "entreprise": entreprise_cible,
@@ -486,9 +576,9 @@ Période couverte : {periode}
             "3. organisation_dimensionnement (analyse, tendances effectifs, nouveaux rôles, "
             "externalisation, so_what pour " + entreprise_cible + ")"
         )
-        part_a = _call_claude(
-            client, model, max_tokens, system_text,
-            TOOL_MISSION_PART_A, "mission_part_a", prompt_a,
+        part_a = _call_llm(
+            provider, model, max_tokens, system_text,
+            TOOL_MISSION_PART_A, "mission_part_a", prompt_a, client,
         )
         _save_tmp(tmp_a, part_a)
     else:
@@ -509,9 +599,9 @@ Période couverte : {periode}
             "so_what pour " + entreprise_cible + ")\n"
             "3. signaux_faibles (max 3 : signal, implication_rh, horizon, pertinence_mission)"
         )
-        part_b = _call_claude(
-            client, model, max_tokens, system_text,
-            TOOL_MISSION_PART_B, "mission_part_b", prompt_b,
+        part_b = _call_llm(
+            provider, model, max_tokens, system_text,
+            TOOL_MISSION_PART_B, "mission_part_b", prompt_b, client,
         )
         _save_tmp(tmp_b, part_b)
     else:
@@ -542,9 +632,9 @@ Période couverte : {periode}
             + "\n2. index_sources : toutes les sources citées [N] dans ce benchmark "
             "(id, titre, source, url, date, pertinence : Directe/Contextuelle)"
         )
-        part_c = _call_claude(
-            client, model, max_tokens, system_text,
-            tool_part_c, "mission_part_c", prompt_c,
+        part_c = _call_llm(
+            provider, model, max_tokens, system_text,
+            tool_part_c, "mission_part_c", prompt_c, client,
         )
         _save_tmp(tmp_c, part_c)
 
@@ -554,7 +644,7 @@ Période couverte : {periode}
     # -- Fusion --
     result = {**part_a, **part_b, **part_c}
     result["_meta"] = {
-        "model": model,
+        "provider": provider, "model": model,
         "mode": "Approfondi",
         "mission": nom_mission,
         "entreprise": entreprise_cible,

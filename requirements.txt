@@ -1,5 +1,8 @@
-# API Anthropic
+# API Anthropic (provider=anthropic)
 anthropic>=0.40.0
+
+# API Google Gemini (provider=gemini — free tier)
+google-genai>=1.0.0
 
 # Collecte des données
 ddgs>=1.0.0
