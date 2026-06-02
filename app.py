@@ -17,12 +17,23 @@ from dotenv import dotenv_values
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT))
 
-# ── Chargement .env (clé API côté serveur) ────────────────────────────────────
+# ── Chargement .env (clé API côté serveur — usage local) ─────────────────────
 _env_path = ROOT / ".env"
 if _env_path.exists():
     for _k, _v in dotenv_values(_env_path, encoding="utf-8").items():
-        if _v and not os.environ.get(_k):   # écrase aussi les valeurs vides
+        if _v and not os.environ.get(_k):
             os.environ[_k] = _v
+
+# ── Streamlit Cloud : injecter st.secrets dans os.environ ────────────────────
+# Sur Streamlit Community Cloud, les clés API sont configurées dans l'UI Secrets
+# et exposées via st.secrets. Ce bloc les rend disponibles à tous les modules
+# qui utilisent os.environ.get("GEMINI_API_KEY"), os.environ.get("LLM_PROVIDER")…
+try:
+    for _k, _v in st.secrets.items():
+        if isinstance(_v, str) and _v and not os.environ.get(_k):
+            os.environ[_k] = _v
+except Exception:
+    pass  # Pas de secrets configurés (normal en local sans secrets.toml)
 
 # ── Configuration de la page ──────────────────────────────────────────────────
 st.set_page_config(

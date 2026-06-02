@@ -1,6 +1,6 @@
 # ── Secrets & configuration locale ──────────────────────────────────────────
 .env
-config/users.yaml
+# config/users.yaml est versionné (mots de passe bcrypt hashés — pas en clair)
 
 # ── Rapports générés (trop lourds pour git) ───────────────────────────────────
 reports/

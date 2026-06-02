@@ -1,0 +1,35 @@
+# ──────────────────────────────────────────────────────────────────────────────
+#  Utilisateurs — Observatoire de la Transformation Organisationnelle
+#  Gérer les comptes avec : python manage_users.py
+# ──────────────────────────────────────────────────────────────────────────────
+
+credentials:
+  usernames:
+
+    admin.lms:
+      name: Administrateur LMS
+      email: admin@lms-orh.com
+      # Mot de passe par défaut : LmsObs2024!  ← à changer après 1ère connexion
+      password: "$2b$12$iOKxCCXkGuLuzxdZSsxLF.yced0wV44UkjuvOHNfJoGvdKqMtC8rO"
+      role: admin
+
+    consultant.veille:
+      name: Consultant Veille
+      email: veille@lms-orh.com
+      # Mot de passe par défaut : Veille2024!  ← à changer après 1ère connexion
+      password: "$2b$12$tBsnnsR0o0S.Lywm0kFqWuqMWx.BKoFSP3rELGqoFM4bcA/yhCDg."
+      role: user
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Cookie de session (NE PAS partager cette clé)
+# ──────────────────────────────────────────────────────────────────────────────
+cookie:
+  name: lms_observatoire_auth
+  key: "lms-orh-observatoire-secret-2024-xK9mP"
+  expiry_days: 7
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  Mot de passe oublié (optionnel)
+# ──────────────────────────────────────────────────────────────────────────────
+forgot_password:
+  captcha: false
