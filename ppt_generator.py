@@ -165,14 +165,11 @@ def _content_slide(prs, titre, col_gauche_text, col_droite_text, so_what_text,
     if len(sp_tree) > 2:
         sp_tree.remove(sp_tree[2])
 
-    # Barre bordeaux haut
+    # Barre bordeaux haut (titre en textbox décalé pour marge interne propre)
     barre_h = Cm(1.8)
-    rect_top = _add_rect(slide, Cm(0), Cm(0), SLIDE_W, barre_h, fill_color=BORDEAUX)
-    _set_rect_text(rect_top, titre, font_size=18, bold=True, color=BLANC)
-    rect_top.text_frame.paragraphs[0].alignment = PP_ALIGN.LEFT
-    # marge interne simulée via un textbox par-dessus
+    _add_rect(slide, Cm(0), Cm(0), SLIDE_W, barre_h, fill_color=BORDEAUX)
     _add_textbox(
-        slide, Cm(0.4), Cm(0), SLIDE_W - Cm(0.4), barre_h,
+        slide, Cm(0.5), Cm(0.25), SLIDE_W - Cm(1.0), barre_h - Cm(0.25),
         titre, font_size=18, bold=True, color=BLANC,
     )
 
@@ -308,12 +305,17 @@ def _slide_contexte(prs, analysis, mission_config):
     ctx = analysis.get("contexte_mission", {})
     texte = ctx.get("texte", "")
     angle = ctx.get("angle_rh", "")
+    angle_strategique = mission_config.get("angle_strategique_rh", "")
+    so_what = (
+        f"Question centrale : {angle_strategique}"
+        if angle_strategique else angle or "Voir angle RH central."
+    )
     return _content_slide(
         prs,
         titre="Contexte & Angle RH",
         col_gauche_text=texte,
         col_droite_text=f"Angle RH central :\n\n{angle}",
-        so_what_text="Ce benchmark vise à répondre à la question stratégique identifiée pour cette mission.",
+        so_what_text=so_what,
         mission_config=mission_config,
     )
 

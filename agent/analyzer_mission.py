@@ -130,6 +130,22 @@ TOOL_MISSION_RAPIDE = {
                     "required": ["action", "justification", "priorite", "kpi", "horizon"],
                 },
             },
+            "slides_optionnelles": {
+                "type": "array",
+                "description": "Slides thématiques optionnelles demandées (1 item par thème coché)",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "cle": {"type": "string"},
+                        "titre": {"type": "string"},
+                        "observation": {"type": "string"},
+                        "benchmark_sectoriel": {"type": "string"},
+                        "implication_rh": {"type": "string"},
+                        "so_what": {"type": "string"},
+                    },
+                    "required": ["cle", "titre", "observation", "benchmark_sectoriel", "implication_rh", "so_what"],
+                },
+            },
         },
         "required": [
             "contexte_mission",
@@ -139,6 +155,7 @@ TOOL_MISSION_RAPIDE = {
             "innovation_manageriale",
             "signaux_faibles",
             "recommandations_mission",
+            "slides_optionnelles",
         ],
     },
 }
@@ -536,11 +553,19 @@ Période couverte : {periode}
         if result is None:
             if progress_callback:
                 progress_callback(0, 1, f"Appel {provider.title()} unique — Mode Rapide…")
+            slides_labels = ", ".join(slides_optionnelles) if slides_optionnelles else "aucune"
             prompt = (
                 base_prompt
                 + "\n\nUtilise `mission_benchmark` pour produire le benchmark complet en un seul appel : "
                 "contexte_mission, business_model_rh, organisation_dimensionnement, gouvernance_rh, "
                 "innovation_manageriale, signaux_faibles (max 3), recommandations_mission (exactement 3)."
+                + (
+                    f"\n\nSlides optionnelles demandées : {slides_labels}. "
+                    f"Remplis slides_optionnelles avec 1 item par thème coché "
+                    f"(cle, titre, observation, benchmark_sectoriel, implication_rh, so_what)."
+                    if slides_optionnelles else
+                    "\n\nAucune slide optionnelle demandée : slides_optionnelles = []."
+                )
             )
             result = _call_llm(
                 provider, model, max_tokens, system_text,
