@@ -166,14 +166,16 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Statut clé API (Gemini ou Anthropic selon le provider)
+    # Statut clé API selon le provider actif
     _provider = os.environ.get("LLM_PROVIDER", load_settings().get("analysis", {}).get("provider", "anthropic")).lower()
-    _api_key_sidebar = os.environ.get("GEMINI_API_KEY" if _provider == "gemini" else "ANTHROPIC_API_KEY", "")
+    _key_map = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+    _key_name_sidebar = _key_map.get(_provider, "ANTHROPIC_API_KEY")
+    _api_key_sidebar = os.environ.get(_key_name_sidebar, "")
     if _api_key_sidebar:
         st.markdown(f"✅ **Clé API {_provider.title()} configurée**")
     else:
         st.warning(f"⚠️ Clé API {_provider.title()} manquante")
-        st.caption(f"Ajoutez {'GEMINI_API_KEY' if _provider == 'gemini' else 'ANTHROPIC_API_KEY'} dans les Secrets")
+        st.caption(f"Ajoutez {_key_name_sidebar} dans les Secrets")
 
     st.markdown("---")
     settings_sidebar = load_settings()
@@ -229,11 +231,12 @@ with tab_analyse:
     settings = load_settings()
     sectors = load_sectors()
     _provider_tab = os.environ.get("LLM_PROVIDER", settings.get("analysis", {}).get("provider", "anthropic")).lower()
-    api_key = os.environ.get("GEMINI_API_KEY" if _provider_tab == "gemini" else "ANTHROPIC_API_KEY", "")
+    _key_map_tab = {"gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY", "anthropic": "ANTHROPIC_API_KEY"}
+    _key_name_tab = _key_map_tab.get(_provider_tab, "ANTHROPIC_API_KEY")
+    api_key = os.environ.get(_key_name_tab, "")
 
     if not api_key:
-        _key_name = "GEMINI_API_KEY" if _provider_tab == "gemini" else "ANTHROPIC_API_KEY"
-        st.error(f"🔑 Clé API {_provider_tab.title()} non configurée ({_key_name} manquante). Contactez l'administrateur.")
+        st.error(f"🔑 Clé API {_provider_tab.title()} non configurée ({_key_name_tab} manquante). Contactez l'administrateur.")
         st.stop()
 
     col_form, col_info = st.columns([1, 1], gap="large")
