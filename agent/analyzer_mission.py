@@ -415,12 +415,54 @@ def _call_gemini(model_name: str, max_tokens: int, system_text: str,
     return result
 
 
+def _call_groq(model_name: str, max_tokens: int, system_text: str,
+               tool: dict, tool_name: str, user_prompt: str) -> dict:
+    """Appel Groq avec JSON mode."""
+    try:
+        from groq import Groq
+    except ImportError:
+        raise ImportError("groq non installé. Exécuter : pip install groq>=0.9.0")
+
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY manquant. Ajoutez votre clé dans le fichier .env.")
+
+    client = Groq(api_key=api_key)
+    schema = tool.get("input_schema", {})
+    schema_json = json.dumps(schema, ensure_ascii=False, indent=2)
+
+    system_with_schema = (
+        f"{system_text}\n\n"
+        f"SCHÉMA JSON DE SORTIE ATTENDU (respecter EXACTEMENT) :\n"
+        f"```json\n{schema_json}\n```\n"
+        f"Réponds UNIQUEMENT avec le JSON valide, sans texte autour."
+    )
+
+    response = client.chat.completions.create(
+        model=model_name,
+        messages=[
+            {"role": "system", "content": system_with_schema},
+            {"role": "user", "content": user_prompt},
+        ],
+        response_format={"type": "json_object"},
+        max_tokens=max_tokens,
+        temperature=0.3,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    result = json.loads(raw)
+    logger.info(f"{tool_name} (Groq/{model_name}) — {response.usage.prompt_tokens} in / {response.usage.completion_tokens} out")
+    return result
+
+
 def _call_llm(provider: str, model: str, max_tokens: int, system_text: str,
               tool: dict, tool_name: str, user_prompt: str,
               client=None) -> dict:
-    """Dispatcher : appelle Anthropic ou Gemini selon le provider."""
+    """Dispatcher : appelle Anthropic, Gemini ou Groq selon le provider."""
     if provider == "gemini":
         return _call_gemini(model, max_tokens, system_text, tool, tool_name, user_prompt)
+    elif provider == "groq":
+        return _call_groq(model, max_tokens, system_text, tool, tool_name, user_prompt)
     else:
         if client is None:
             raise ValueError("client Anthropic requis pour provider='anthropic'.")
@@ -489,9 +531,15 @@ def analyze_mission(
     if provider == "gemini":
         model = (
             os.environ.get("GEMINI_MODEL")
-            or analysis_cfg.get("gemini_model", "gemini-1.5-flash")
+            or analysis_cfg.get("gemini_model", "gemini-2.5-flash")
         )
         logger.info(f"Provider : Gemini — modèle : {model}")
+    elif provider == "groq":
+        model = (
+            os.environ.get("GROQ_MODEL")
+            or analysis_cfg.get("groq_model", "llama-3.3-70b-versatile")
+        )
+        logger.info(f"Provider : Groq — modèle : {model}")
     else:
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
@@ -547,7 +595,12 @@ Période couverte : {periode}
     #  MODE RAPIDE : 1 appel
     # ─────────────────────────────────────────────────────────────────────────
     if mode == "Rapide":
-        max_tokens = analysis_cfg.get("gemini_max_tokens", 4096) if provider == "gemini" else 4096
+        if provider == "gemini":
+            max_tokens = analysis_cfg.get("gemini_max_tokens", 4096)
+        elif provider == "groq":
+            max_tokens = analysis_cfg.get("groq_max_tokens", 8192)
+        else:
+            max_tokens = 4096
         tmp = _tmp_path(reports_dir, entreprise_cible, "rapide")
         result = _load_tmp(tmp)
         if result is None:
@@ -590,7 +643,12 @@ Période couverte : {periode}
     # ─────────────────────────────────────────────────────────────────────────
     #  MODE APPROFONDI : 3 appels
     # ─────────────────────────────────────────────────────────────────────────
-    max_tokens = analysis_cfg.get("gemini_max_tokens", 4096) if provider == "gemini" else 8192
+    if provider == "gemini":
+        max_tokens = analysis_cfg.get("gemini_max_tokens", 4096)
+    elif provider == "groq":
+        max_tokens = analysis_cfg.get("groq_max_tokens", 8192)
+    else:
+        max_tokens = 8192
     tmp_a = _tmp_path(reports_dir, entreprise_cible, "part_a")
     tmp_b = _tmp_path(reports_dir, entreprise_cible, "part_b")
     tmp_c = _tmp_path(reports_dir, entreprise_cible, "part_c")
