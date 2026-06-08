@@ -14,7 +14,9 @@ analysis:
   gemini_max_articles: 12           # Nb articles max envoyés à Gemini (prompt plus court)
   gemini_summary_len: 150           # Longueur résumé article pour Gemini (vs 400 Anthropic)
   groq_model: llama-3.3-70b-versatile  # Modèle Groq (si provider=groq — free tier généreux)
-  groq_max_tokens: 8192             # Groq free tier supporte jusqu'à 8192 tokens en sortie
+  groq_max_tokens: 4096             # Groq free tier : limite 12k TPM (input+output), garder de la marge
+  groq_max_articles: 10             # Nb articles max envoyés à Groq (limiter tokens input)
+  groq_summary_len: 200             # Longueur résumé article pour Groq
   max_tokens: 8192
   temperature: 0.3
 reporting:

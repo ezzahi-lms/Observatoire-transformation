@@ -570,14 +570,19 @@ def analyze_mission(
         angle_strategique_rh=angle,
     )
 
-    # Pour Gemini free tier : limiter articles et longueur des résumés
+    # Pour Gemini / Groq free tier : limiter articles et longueur des résumés
     articles_for_llm = articles
     summary_len = 400
     if provider == "gemini":
         max_art = analysis_cfg.get("gemini_max_articles", 12)
         summary_len = analysis_cfg.get("gemini_summary_len", 150)
         articles_for_llm = articles[:max_art]
-        logger.info(f"Gemini mission : {len(articles_for_llm)}/{len(articles)} articles")
+        logger.info(f"Gemini mission : {len(articles_for_llm)}/{len(articles)} articles, résumés ≤{summary_len} chars")
+    elif provider == "groq":
+        max_art = analysis_cfg.get("groq_max_articles", 10)
+        summary_len = analysis_cfg.get("groq_summary_len", 200)
+        articles_for_llm = articles[:max_art]
+        logger.info(f"Groq mission : {len(articles_for_llm)}/{len(articles)} articles, résumés ≤{summary_len} chars")
 
     articles_text = _format_articles(articles_for_llm, summary_len=summary_len)
     reports_dir = Path(settings.get("reporting", {}).get("output_dir", "reports"))

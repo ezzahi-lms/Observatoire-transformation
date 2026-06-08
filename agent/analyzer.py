@@ -744,7 +744,7 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
     benchmark_axes = sector_config.get("benchmark_axes", sector_config.get("focus_areas", []))
     freshness = _compute_freshness(articles)
 
-    # Pour Gemini free tier : limiter le nombre d'articles et la longueur des résumés
+    # Pour Gemini / Groq free tier : limiter le nombre d'articles et la longueur des résumés
     articles_for_llm = articles
     summary_len = 400
     if provider == "gemini":
@@ -752,6 +752,11 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
         summary_len = analysis_cfg.get("gemini_summary_len", 150)
         articles_for_llm = articles[:max_art]
         logger.info(f"Gemini : {len(articles_for_llm)}/{len(articles)} articles, résumés ≤{summary_len} chars")
+    elif provider == "groq":
+        max_art = analysis_cfg.get("groq_max_articles", 10)
+        summary_len = analysis_cfg.get("groq_summary_len", 200)
+        articles_for_llm = articles[:max_art]
+        logger.info(f"Groq : {len(articles_for_llm)}/{len(articles)} articles, résumés ≤{summary_len} chars")
 
     articles_text = _format_articles(articles_for_llm, summary_len=summary_len)
 
