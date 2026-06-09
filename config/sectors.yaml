@@ -421,3 +421,47 @@ sectors:
       - "Systèmes d'Information : ERP industrie, MES, SIRH, SI qualité, tableaux de bord opérationnels en temps réel"
       - "Dimension Afrique & MENA : nearshoring vers Maroc, benchmarks industriels Afrique du Nord, opportunités transferts industriels vers Afrique subsaharienne"
       - "RSE & Transition : empreinte carbone, énergie renouvelable dans les process, conditions de travail, économie circulaire industrielle"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SOLUTION 3 — CONFIGURATION RAPPORTS INNOVATION
+#
+#  Un bloc par secteur actif. Chaque bloc définit :
+#    secteur_key     : clé sectors.yaml à utiliser pour la collecte
+#    geographie      : portée géographique du rapport
+#    clients         : liste des clients abonnés à ce rapport
+#      nom           : nom du client (ex: BEL Groupe)
+#      contacts      : liste de contacts (prenom, nom, email)
+#      email_consultant: email du consultant LMS en charge du compte
+#      nom_consultant : nom du consultant (pour la signature)
+#
+#  Planification : 1er du mois à 07h00 (configurable dans settings.yaml)
+#  Flux : Génération → En attente validation → Validé → Envoyé
+# ══════════════════════════════════════════════════════════════════════════════
+
+rapports_innovation:
+
+  # ── Rapport Pharma Maroc ─────────────────────────────────────────────────
+  - secteur_key: "pharma_maroc"
+    geographie: "Maroc & Afrique"
+    actif: true
+    clients:
+      - nom: "Client Pharma 1"
+        contacts:
+          - prenom: "Prénom"
+            nom: "Nom"
+            email: "contact@client-pharma.ma"
+        email_consultant: "consultant@lms-orh.com"
+        nom_consultant: "Consultante LMS"
+
+  # ── Rapport Banques Maroc ────────────────────────────────────────────────
+  - secteur_key: "banques_maroc"
+    geographie: "Maroc & Afrique"
+    actif: false
+    clients: []
+
+  # ── Rapport Industrie Maroc ──────────────────────────────────────────────
+  - secteur_key: "industrie_maroc"
+    geographie: "Maroc"
+    actif: false
+    clients: []

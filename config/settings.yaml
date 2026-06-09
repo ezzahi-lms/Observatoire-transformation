@@ -31,6 +31,12 @@ scheduling:
   day_of_month: 1
   hour: 8
   minute: 0
+  # Planification spécifique aux Rapports Innovation (Solution 3)
+  # Tourne le 1er du mois à 07h00 — avant la veille sectorielle (08h00)
+  innovation:
+    day_of_month: 1
+    hour: 7
+    minute: 0
 logging:
   level: INFO
   file: reports/agent.log

@@ -203,18 +203,20 @@ with st.sidebar:
 
 # Onglet admin uniquement si rôle admin
 if user_role == "admin":
-    tab_analyse, tab_mission, tab_reports, tab_planning, tab_config, tab_admin = st.tabs([
+    tab_analyse, tab_mission, tab_innov, tab_reports, tab_planning, tab_config, tab_admin = st.tabs([
         "🚀 Nouvelle analyse",
         "🎯 Benchmark Mission",
+        "💡 Rapports Innovation",
         "📂 Rapports",
         "📅 Planification",
         "⚙️ Paramètres",
         "👥 Utilisateurs",
     ])
 else:
-    tab_analyse, tab_mission, tab_reports, tab_planning, tab_config = st.tabs([
+    tab_analyse, tab_mission, tab_innov, tab_reports, tab_planning, tab_config = st.tabs([
         "🚀 Nouvelle analyse",
         "🎯 Benchmark Mission",
+        "💡 Rapports Innovation",
         "📂 Rapports",
         "📅 Planification",
         "⚙️ Paramètres",
@@ -553,7 +555,334 @@ with tab_mission:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# ONGLET 3 — RAPPORTS
+# ONGLET 3 — RAPPORTS INNOVATION (Solution 3)
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab_innov:
+    st.header("💡 Rapports Innovation RH — Veille mensuelle client")
+    st.caption(
+        "Génère, valide et envoie chaque mois un rapport d'innovation RH personnalisé "
+        "par secteur et par client. Deux versions : rapport interne consultant + infographie client."
+    )
+
+    from agent.client_report import (
+        generate_all, load_report, list_all_reports, list_pending_reports,
+        validate_report, reject_report, mark_sent, generate_infographie_html,
+        generate_rapport_interne, INNOV_DIR,
+    )
+    import json as _json
+
+    def _load_innov_sectors():
+        """Charge les blocs rapports_innovation depuis sectors.yaml."""
+        sdata = _load_sectors_raw_local()
+        return sdata.get("rapports_innovation", [])
+
+    def _load_sectors_raw_local():
+        """sectors.yaml complet (sectors + rapports_innovation)."""
+        sectors_path = ROOT / "config" / "sectors.yaml"
+        if sectors_path.exists():
+            with open(sectors_path, encoding="utf-8") as f:
+                return yaml.safe_load(f) or {}
+        return {}
+
+    _raw_yaml = _load_sectors_raw_local()
+    _innov_blocs = _raw_yaml.get("rapports_innovation", [])
+    _all_sectors = _raw_yaml.get("sectors", {})
+
+    sub_gen, sub_pending, sub_validated, sub_config = st.tabs([
+        "▶ Générer", "⏳ En attente", "✅ Validés", "⚙ Configuration"
+    ])
+
+    # ── Sous-onglet A : Générer ──────────────────────────────────────────────
+    with sub_gen:
+        st.subheader("Générer un rapport d'innovation")
+
+        _active_blocs = [b for b in _innov_blocs if b.get("actif", False)]
+        _actif_labels = {b["secteur_key"]: b for b in _active_blocs}
+
+        if not _active_blocs:
+            st.warning(
+                "Aucun secteur actif dans `rapports_innovation`. "
+                "Activez un secteur dans l'onglet **Configuration**."
+            )
+        else:
+            col_sec, col_mois = st.columns(2)
+            with col_sec:
+                secteur_keys = [b["secteur_key"] for b in _active_blocs]
+                secteur_labels = {
+                    k: _all_sectors.get(k, {}).get("label", k) for k in secteur_keys
+                }
+                sel_key = st.selectbox(
+                    "Secteur",
+                    options=secteur_keys,
+                    format_func=lambda k: secteur_labels.get(k, k),
+                )
+            with col_mois:
+                from datetime import date as _date
+                _today = _date.today()
+                mois_default = _today.strftime("%B %Y").capitalize()
+                mois_gen = st.text_input("Période", value=mois_default,
+                                          help="Ex: Juin 2026")
+
+            sel_bloc = _actif_labels.get(sel_key, {})
+            _clients_bloc = sel_bloc.get("clients", [])
+            st.caption(
+                f"**{len(_clients_bloc)} client(s)** abonné(s) à ce rapport "
+                f"· Géographie : {sel_bloc.get('geographie', 'Maroc')}"
+            )
+
+            if st.button("🚀 Générer le rapport", type="primary"):
+                _progress_msgs = []
+                def _cb(msg):
+                    _progress_msgs.append(msg)
+
+                with st.status("Génération en cours…", expanded=True) as _status_innov:
+                    try:
+                        _secteur_cfg = dict(_all_sectors.get(sel_key, {}))
+                        _secteur_cfg.setdefault("label", secteur_labels.get(sel_key, sel_key))
+                        _secteur_cfg["geographie"] = sel_bloc.get("geographie", "Maroc")
+
+                        _result = generate_all(
+                            secteur_cfg=_secteur_cfg,
+                            mois=mois_gen,
+                            settings=load_settings(),
+                            clients=_clients_bloc,
+                            progress_callback=_cb,
+                        )
+                        for _m in _progress_msgs:
+                            st.write(_m)
+                        _status_innov.update(label="✅ Rapport généré !", state="complete")
+                        st.success(
+                            f"Rapport **{_result['report_id']}** généré. "
+                            "Rendez-vous dans **En attente** pour valider avant envoi."
+                        )
+                        # Aperçu inline
+                        with st.expander("Aperçu infographie client (générique)"):
+                            _html_prev = _result.get("path_infographie", "")
+                            if _html_prev and Path(_html_prev).exists():
+                                st.components.v1.html(
+                                    Path(_html_prev).read_text(encoding="utf-8"),
+                                    height=700, scrolling=True,
+                                )
+                    except Exception as _e:
+                        for _m in _progress_msgs:
+                            st.write(_m)
+                        _status_innov.update(label="❌ Erreur", state="error")
+                        st.error(f"Erreur : {_e}")
+
+    # ── Sous-onglet B : En attente ───────────────────────────────────────────
+    with sub_pending:
+        st.subheader("Rapports en attente de validation")
+        if st.button("🔄 Actualiser", key="innov_refresh_pending"):
+            st.rerun()
+
+        _pending = list_pending_reports()
+        if not _pending:
+            st.info("Aucun rapport en attente.")
+        else:
+            st.caption(f"{len(_pending)} rapport(s) à valider")
+            for _meta in _pending:
+                _rid = _meta.get("report_id", "")
+                with st.expander(
+                    f"**{_meta.get('secteur', '')}** — {_meta.get('mois', '')} "
+                    f"· Généré le {_meta.get('generated_at', '')[:10]}"
+                ):
+                    _rdata = load_report(_rid)
+                    if not _rdata:
+                        st.error("Fichier JSON introuvable.")
+                        continue
+
+                    _tab_inf, _tab_int = st.tabs(["Infographie client", "Rapport consultant"])
+                    with _tab_inf:
+                        _html_inf = generate_infographie_html(_rdata)
+                        st.components.v1.html(_html_inf, height=650, scrolling=True)
+                        st.download_button(
+                            "⬇ Télécharger infographie",
+                            data=_html_inf.encode("utf-8"),
+                            file_name=f"{_rid}_infographie.html",
+                            mime="text/html",
+                            key=f"dl_inf_{_rid}",
+                        )
+                    with _tab_int:
+                        _html_int = generate_rapport_interne(_rdata)
+                        st.components.v1.html(_html_int, height=650, scrolling=True)
+                        st.download_button(
+                            "⬇ Télécharger rapport interne",
+                            data=_html_int.encode("utf-8"),
+                            file_name=f"{_rid}_interne.html",
+                            mime="text/html",
+                            key=f"dl_int_{_rid}",
+                        )
+
+                    st.markdown("---")
+                    _col_v, _col_r = st.columns(2)
+                    with _col_v:
+                        if st.button("✅ Valider et préparer l'envoi", key=f"val_{_rid}",
+                                     type="primary", use_container_width=True):
+                            validate_report(_rid)
+                            st.success(f"Rapport {_rid} validé. Rendez-vous dans **Validés**.")
+                            st.rerun()
+                    with _col_r:
+                        if st.button("❌ Rejeter (régénérer)", key=f"rej_{_rid}",
+                                     use_container_width=True):
+                            reject_report(_rid)
+                            st.warning(f"Rapport {_rid} rejeté.")
+                            st.rerun()
+
+    # ── Sous-onglet C : Validés ──────────────────────────────────────────────
+    with sub_validated:
+        st.subheader("Rapports validés — Prêts à envoyer")
+        if st.button("🔄 Actualiser", key="innov_refresh_val"):
+            st.rerun()
+
+        try:
+            import json as _j2
+            _all_reps = list_all_reports()
+            _validated = [r for r in _all_reps if r.get("statut") == "validé"]
+        except Exception:
+            _validated = []
+
+        if not _validated:
+            st.info("Aucun rapport validé pour le moment.")
+        else:
+            for _meta in _validated:
+                _rid = _meta.get("report_id", "")
+                with st.expander(
+                    f"**{_meta.get('secteur', '')}** — {_meta.get('mois', '')} "
+                    f"· ✅ Validé"
+                ):
+                    _rdata = load_report(_rid)
+                    if not _rdata:
+                        st.error("Fichier JSON introuvable.")
+                        continue
+
+                    # Trouver le bloc clients correspondant
+                    _clients_envoi = []
+                    for _b in _innov_blocs:
+                        if _b.get("secteur_key") == _meta.get("secteur", "").replace(" ", "_").lower():
+                            _clients_envoi = _b.get("clients", [])
+                            break
+                    # Fallback par secteur_key stocké
+                    if not _clients_envoi:
+                        for _b in _innov_blocs:
+                            if _all_sectors.get(_b.get("secteur_key", {}), {}).get("label", "") == _meta.get("secteur", ""):
+                                _clients_envoi = _b.get("clients", [])
+                                break
+
+                    st.caption(f"{len(_clients_envoi)} client(s) destinataire(s)")
+
+                    from mailer import check_smtp_config, send_report_to_all_clients
+                    _smtp_ok, _smtp_msg = check_smtp_config()
+
+                    if not _smtp_ok:
+                        st.warning(f"⚠️ SMTP non configuré : {_smtp_msg}")
+                        st.info("Configurez SMTP_HOST, SMTP_USER, SMTP_PASSWORD dans les Secrets Streamlit.")
+                    else:
+                        st.success(f"SMTP configuré ({_smtp_msg})")
+
+                    _col_send, _col_dl = st.columns(2)
+                    with _col_send:
+                        if _smtp_ok:
+                            if st.button(f"📧 Envoyer à {len(_clients_envoi)} client(s)",
+                                          key=f"send_{_rid}", type="primary",
+                                          use_container_width=True):
+                                _sent_msgs = []
+                                def _send_cb(m): _sent_msgs.append(m)
+                                with st.spinner("Envoi en cours…"):
+                                    _res_send = send_report_to_all_clients(
+                                        _rdata, _clients_envoi, _send_cb
+                                    )
+                                for _m in _sent_msgs:
+                                    st.write(_m)
+                                _ok_count = sum(1 for v in _res_send.values() if v)
+                                if _ok_count == len(_res_send):
+                                    mark_sent(_rid)
+                                    st.success(f"✅ {_ok_count}/{len(_res_send)} envois réussis.")
+                                else:
+                                    st.warning(
+                                        f"{_ok_count}/{len(_res_send)} envois réussis. "
+                                        "Vérifiez les logs."
+                                    )
+                                st.rerun()
+                        else:
+                            st.button("📧 Envoi désactivé (SMTP manquant)",
+                                       disabled=True, use_container_width=True,
+                                       key=f"send_dis_{_rid}")
+                    with _col_dl:
+                        _html_dl = generate_infographie_html(_rdata)
+                        st.download_button(
+                            "⬇ Télécharger infographie",
+                            data=_html_dl.encode("utf-8"),
+                            file_name=f"{_rid}_infographie.html",
+                            mime="text/html",
+                            key=f"dl_val_{_rid}",
+                            use_container_width=True,
+                        )
+
+    # ── Sous-onglet D : Configuration ────────────────────────────────────────
+    with sub_config:
+        st.subheader("Configuration des rapports Innovation")
+
+        st.markdown("**Secteurs actifs / inactifs**")
+        for _b in _innov_blocs:
+            _sk = _b.get("secteur_key", "")
+            _label = _all_sectors.get(_sk, {}).get("label", _sk)
+            _actif = _b.get("actif", False)
+            _nb_cl = len(_b.get("clients", []))
+            st.markdown(
+                f"{'🟢' if _actif else '⚫'} **{_label}** — `{_sk}` — "
+                f"{_nb_cl} client(s)"
+            )
+
+        st.markdown("---")
+        st.markdown(
+            "Pour modifier les secteurs, clients et contacts, éditez "
+            "`config/sectors.yaml` (section `rapports_innovation`) "
+            "et redéployez l'application."
+        )
+        st.markdown("**SMTP (envoi email)**")
+        from mailer import check_smtp_config as _check_smtp
+        _ok_s, _msg_s = _check_smtp()
+        if _ok_s:
+            st.success(f"✅ {_msg_s}")
+        else:
+            st.error(f"❌ {_msg_s}")
+        with st.expander("Variables SMTP requises (Streamlit Secrets)"):
+            st.code(
+                "SMTP_HOST = smtp.gmail.com\n"
+                "SMTP_PORT = 587\n"
+                "SMTP_USER = votre@email.com\n"
+                "SMTP_PASSWORD = votre_app_password\n"
+                "EMAIL_FROM_NAME = LMS ORH — Veille Innovation",
+                language="toml",
+            )
+
+        st.markdown("---")
+        st.markdown("**Historique des rapports**")
+        _all_hist = list_all_reports()
+        if not _all_hist:
+            st.info("Aucun rapport généré.")
+        else:
+            _df_data = [
+                {
+                    "Secteur": r.get("secteur", ""),
+                    "Mois": r.get("mois", ""),
+                    "Statut": r.get("statut", ""),
+                    "Généré le": r.get("generated_at", "")[:10],
+                    "Sources": r.get("nb_sources", 0),
+                    "Provider": r.get("provider", ""),
+                }
+                for r in _all_hist
+            ]
+            try:
+                import pandas as _pd
+                st.dataframe(_pd.DataFrame(_df_data), use_container_width=True)
+            except ImportError:
+                for _row in _df_data:
+                    st.write(_row)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ONGLET 4 — RAPPORTS
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_reports:
     st.header("Rapports générés")

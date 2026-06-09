@@ -63,6 +63,13 @@ def load_sectors() -> dict:
         return yaml.safe_load(f).get("sectors", {})
 
 
+def load_innov_blocs() -> list:
+    """Charge les blocs rapports_innovation depuis sectors.yaml."""
+    with open(ROOT / "config" / "sectors.yaml", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    return data.get("rapports_innovation", [])
+
+
 # ── Pipeline principal ─────────────────────────────────────────────────────────
 def run_pipeline(sector_key: str, settings: dict, sectors: dict) -> list[str]:
     """Exécute le pipeline complet : collecte → analyse → rapport."""
@@ -122,6 +129,46 @@ def cmd_run(args, settings, sectors):
         sys.exit(1)
 
 
+# ── Job Innovation mensuel ────────────────────────────────────────────────────
+def run_innovation_pipeline(settings: dict):
+    """
+    Génère les rapports innovation pour tous les secteurs actifs.
+    Appelé le 1er du mois à 07h00 par le scheduler.
+    """
+    from agent.client_report import generate_all
+
+    mois = datetime.now().strftime("%B %Y").capitalize()
+    innov_blocs = load_innov_blocs()
+    all_sectors = load_sectors()
+
+    active = [b for b in innov_blocs if b.get("actif", False)]
+    if not active:
+        logger.info("Innovation : aucun secteur actif configuré.")
+        return
+
+    for bloc in active:
+        sk = bloc.get("secteur_key", "")
+        if sk not in all_sectors:
+            logger.warning(f"Innovation : secteur_key '{sk}' introuvable dans sectors.yaml")
+            continue
+
+        secteur_cfg = dict(all_sectors[sk])
+        secteur_cfg["geographie"] = bloc.get("geographie", "Maroc")
+        clients = bloc.get("clients", [])
+
+        logger.info(f"Innovation : génération {sk} — {mois} ({len(clients)} clients)")
+        try:
+            result = generate_all(
+                secteur_cfg=secteur_cfg,
+                mois=mois,
+                settings=settings,
+                clients=clients,
+            )
+            logger.info(f"Innovation {sk} → {result['report_id']} (en attente de validation)")
+        except Exception as e:
+            logger.exception(f"Innovation {sk} : erreur génération : {e}")
+
+
 # ── Commande : schedule ────────────────────────────────────────────────────────
 def cmd_schedule(args, settings, sectors):
     from apscheduler.schedulers.blocking import BlockingScheduler
@@ -133,13 +180,20 @@ def cmd_schedule(args, settings, sectors):
         return
 
     sector_key = args.sector or settings.get("agent", {}).get("default_sector", "pharmaceutique")
-    day = sched_cfg.get("day_of_month", 1)
-    hour = sched_cfg.get("hour", 8)
+    day    = sched_cfg.get("day_of_month", 1)
+    hour   = sched_cfg.get("hour", 8)
     minute = sched_cfg.get("minute", 0)
 
-    scheduler = BlockingScheduler(timezone="Europe/Paris")
+    # Innovation : 1er du mois à 07h00 (configurable)
+    innov_cfg  = sched_cfg.get("innovation", {})
+    innov_day  = innov_cfg.get("day_of_month", 1)
+    innov_hour = innov_cfg.get("hour", 7)
+    innov_min  = innov_cfg.get("minute", 0)
 
-    def job():
+    scheduler = BlockingScheduler(timezone="Africa/Casablanca")
+
+    # Job veille sectorielle
+    def job_veille():
         logger.info(f"Démarrage automatique — secteur : {sector_key}")
         try:
             run_pipeline(sector_key, settings, sectors)
@@ -147,19 +201,35 @@ def cmd_schedule(args, settings, sectors):
             logger.exception(f"Erreur lors de l'exécution planifiée : {e}")
 
     scheduler.add_job(
-        job,
+        job_veille,
         CronTrigger(day=day, hour=hour, minute=minute),
         id="veille_mensuelle",
         name=f"Veille {sector_key}",
         replace_existing=True,
     )
 
-    next_run = scheduler.get_job("veille_mensuelle").next_run_time
+    # Job innovation mensuel
+    def job_innovation():
+        logger.info("Démarrage automatique — Rapports Innovation")
+        run_innovation_pipeline(settings)
+
+    scheduler.add_job(
+        job_innovation,
+        CronTrigger(day=innov_day, hour=innov_hour, minute=innov_min),
+        id="innovation_mensuelle",
+        name="Rapports Innovation RH",
+        replace_existing=True,
+    )
+
+    next_veille  = scheduler.get_job("veille_mensuelle").next_run_time
+    next_innov   = scheduler.get_job("innovation_mensuelle").next_run_time
     print(f"\nScheduler démarré (Ctrl+C pour arrêter)")
-    print(f"  Secteur    : {sector_key}")
-    print(f"  Fréquence  : le {day} de chaque mois à {hour:02d}h{minute:02d}")
-    if next_run:
-        print(f"  Prochaine  : {next_run.strftime('%d/%m/%Y %H:%M')}")
+    print(f"  Veille sectorielle  : {sector_key} — le {day} à {hour:02d}h{minute:02d}")
+    if next_veille:
+        print(f"    Prochaine : {next_veille.strftime('%d/%m/%Y %H:%M')}")
+    print(f"  Rapports Innovation : le {innov_day} à {innov_hour:02d}h{innov_min:02d}")
+    if next_innov:
+        print(f"    Prochaine : {next_innov.strftime('%d/%m/%Y %H:%M')}")
     print()
 
     try:
