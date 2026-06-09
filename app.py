@@ -364,21 +364,37 @@ with tab_mission:
 
         col1, col2 = st.columns(2)
         with col1:
-            nom_mission = st.text_input("Nom de la mission *", placeholder="Ex: Diagnostic RH — Groupe Saham")
-            entreprise_cible = st.text_input("Entreprise / Acteur cible *", placeholder="Ex: Saham Group")
-            secteur_mission = st.selectbox("Secteur d'activité *",
-                ["Assurance", "Banque", "Pharma", "Retail", "Industrie",
-                 "Énergie", "Santé", "Telecom", "Agroalimentaire", "Autre"])
+            nom_mission = st.text_input("Nom de la mission *", placeholder="Ex: Diagnostic RH — BEL Groupe")
+            entreprise_cible = st.text_input("Entreprise / Acteur cible *", placeholder="Ex: BEL Groupe, OCP, Marjane…")
+            secteur_mission = st.selectbox("Secteur d'activité *", [
+                "Agroalimentaire", "Industrie & Manufacturing", "Banque & Finance",
+                "Assurance", "Santé & Pharma", "Retail & Distribution",
+                "Telecom & Digital", "Énergie & Utilities", "Immobilier & BTP",
+                "Transport & Logistique", "Secteur Public & Parapublic", "Autre",
+            ])
+            geographie = st.selectbox("Géographie prioritaire *", [
+                "Maroc", "Maroc & MENA", "Afrique francophone", "France & Europe", "International",
+            ])
         with col2:
-            mode_analyse = st.radio("Mode d'analyse", ["Rapide (~2 min)", "Approfondi (~6 min)"], horizontal=True)
+            mode_analyse = st.radio("Mode d'analyse", ["Rapide (~2 min)", "Approfondi (~6 min)"],
+                                    horizontal=True,
+                                    help="Rapide : 1 appel LLM, axes fixes. Approfondi : 3 appels, benchmark complet avec chiffres et entreprises nommées.")
             periode = st.selectbox("Période d'analyse",
                 ["3 derniers mois", "6 derniers mois", "12 derniers mois", "24 derniers mois"],
                 index=1)
 
         angle_strategique = st.text_area(
-            "Angle stratégique RH *",
-            placeholder="Ex: Comment les assureurs marocains réorganisent-ils leurs équipes RH face à la digitalisation ?",
-            max_chars=500, height=100
+            "Angle stratégique RH * (3-4 phrases)",
+            placeholder=(
+                "Décrivez la question centrale de votre mission.\n"
+                "Ex : Comment BEL Groupe structure-t-il ses équipes RH pour accompagner son expansion "
+                "en Afrique ? Quelles compétences clés sont en tension ?"
+            ),
+            max_chars=600, height=110
+        )
+        concurrent_reference = st.text_input(
+            "Concurrent ou référence sectorielle à comparer (optionnel)",
+            placeholder="Ex : Nestlé Maroc, Danone, Label'Vie, SABIC…"
         )
 
         st.markdown("**Sources prioritaires** (optionnel)")
@@ -427,7 +443,9 @@ with tab_mission:
             "nom_mission": nom_mission,
             "entreprise_cible": entreprise_cible,
             "secteur": secteur_mission,
+            "geographie": geographie,
             "angle_strategique_rh": angle_strategique,
+            "concurrent_reference": concurrent_reference,
             "periode": periode,
             "mode": "Rapide" if "Rapide" in mode_analyse else "Approfondi",
             "sources": sources_cochees,

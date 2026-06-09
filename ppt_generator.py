@@ -22,12 +22,19 @@ except ImportError as _e:
 # ─────────────────────────────────────────────────────────────────────────────
 #  CONSTANTES VISUELLES LMS ORH
 # ─────────────────────────────────────────────────────────────────────────────
-BORDEAUX = RGBColor(139, 26, 26)    # #8B1A1A
-GRIS_FONCE = RGBColor(45, 45, 45)  # #2D2D2D
-GRIS_CLAIR = RGBColor(245, 245, 245)  # #F5F5F5
+BORDEAUX = RGBColor(139, 26, 26)      # #8B1A1A
+BORDEAUX_CLAIR = RGBColor(200, 170, 170)  # texte secondaire sur fond bordeaux
+GRIS_FONCE = RGBColor(45, 45, 45)    # #2D2D2D
+GRIS_CLAIR = RGBColor(245, 245, 245) # #F5F5F5
+GRIS_SEP = RGBColor(229, 229, 229)   # #E5E5E5 — séparateur vertical
 BLANC = RGBColor(255, 255, 255)
-VERT_KPI = RGBColor(39, 174, 96)   # #27AE62
+VERT_KPI = RGBColor(39, 174, 96)     # #27AE62
 POLICE = "Arial"
+
+# Dimensions layout slides de contenu
+HEADER_H = Cm(2.4)     # 12.6% de 19.05cm — bandeau titre bordeaux
+FOOTER_H = Cm(2.5)     # 13.1% de 19.05cm — bandeau footer bordeaux (so what + confidentiel)
+BAR_V_W  = Cm(0.18)    # barre verticale bordeaux gauche (~6px)
 
 # Dimensions 16:9 widescreen
 SLIDE_W = Cm(33.87)
@@ -135,86 +142,120 @@ def _add_bullet_textbox(slide, left, top, width, height, items, font_size=10,
     return txBox
 
 
-def _footer(slide, nom_mission, entreprise_cible):
-    """Ajoute le footer confidentiel LMS."""
-    footer_text = f"Confidentiel — {nom_mission} · LMS ORH"
-    _add_textbox(
-        slide,
-        left=Cm(0), top=Cm(18.3), width=SLIDE_W, height=Cm(0.7),
-        text=footer_text, font_size=8, color=GRIS_FONCE, align=PP_ALIGN.CENTER,
-    )
-
-
 def _content_slide(prs, titre, col_gauche_text, col_droite_text, so_what_text,
-                   mission_config, col_gauche_items=None):
+                   mission_config, col_gauche_items=None, titre_droite=None):
     """
-    Crée une slide de contenu standard :
-    - barre bordeaux haut
-    - barre bordeaux verticale gauche
-    - 2 colonnes : gauche (analyse) / droite (benchmark)
-    - encadré bordeaux bas (so_what)
-    - footer
+    Slide de contenu standard — layout LMS ORH :
+    ┌──────────────────────────────────────────┐
+    │ HEADER BORDEAUX (2.4cm) — titre slide    │
+    ├─┬────────────────────┬───────────────────┤
+    │▌│ Colonne gauche 57% │ Colonne droite 38%│  ← fond blanc, barre bordeaux 6px gauche
+    │ │                    │   séparateur gris │
+    ├─┴────────────────────┴───────────────────┤
+    │ FOOTER BORDEAUX (2.5cm)                  │
+    │  So what ? pour [entreprise] :  [texte]  │
+    │  Confidentiel — [mission] · LMS ORH      │
+    └──────────────────────────────────────────┘
     """
     nom_mission = mission_config.get("nom_mission", "Mission")
     entreprise_cible = mission_config.get("entreprise_cible", "Entreprise")
 
     slide_layout = prs.slide_layouts[6]  # blank
     slide = prs.slides.add_slide(slide_layout)
-    # Supprimer les placeholders résiduels s'il en existe (layout non strictement vide)
     sp_tree = slide.shapes._spTree
     if len(sp_tree) > 2:
         sp_tree.remove(sp_tree[2])
 
-    # Barre bordeaux haut (titre en textbox décalé pour marge interne propre)
-    barre_h = Cm(1.8)
-    _add_rect(slide, Cm(0), Cm(0), SLIDE_W, barre_h, fill_color=BORDEAUX)
+    # ── HEADER bordeaux ─────────────────────────────────────────────────────
+    _add_rect(slide, Cm(0), Cm(0), SLIDE_W, HEADER_H, fill_color=BORDEAUX)
     _add_textbox(
-        slide, Cm(0.5), Cm(0.25), SLIDE_W - Cm(1.0), barre_h - Cm(0.25),
+        slide, Cm(0.5), Cm(0.3), SLIDE_W - Cm(1.0), HEADER_H - Cm(0.3),
         titre, font_size=18, bold=True, color=BLANC,
     )
 
-    # Barre bordeaux verticale gauche
-    _add_rect(slide, Cm(0), barre_h, Cm(0.4), SLIDE_H - barre_h - Cm(2.5), fill_color=BORDEAUX)
+    # ── ZONE CONTENU — fond blanc explicite ─────────────────────────────────
+    content_top = HEADER_H
+    content_h = SLIDE_H - HEADER_H - FOOTER_H
+    _add_rect(slide, Cm(0), content_top, SLIDE_W, content_h, fill_color=BLANC)
 
-    # Zone contenu (de y=1.8 à y=16.5)
-    content_top = barre_h + Cm(0.2)
-    content_h = Cm(14.5)
-    col_l_w = SLIDE_W * 0.58
-    col_r_w = SLIDE_W * 0.38
-    gap = Cm(0.5)
-    col_l_left = Cm(0.6)
-    col_r_left = col_l_left + col_l_w + gap
+    # Barre bordeaux verticale gauche (mince, ~6px)
+    _add_rect(slide, Cm(0), content_top, BAR_V_W, content_h, fill_color=BORDEAUX)
 
-    # Colonne gauche
+    # Layout 2 colonnes
+    col_left_x = BAR_V_W + Cm(0.35)
+    col_l_w    = SLIDE_W * 0.555
+    sep_x      = col_left_x + col_l_w + Cm(0.2)
+    col_r_x    = sep_x + Cm(0.2)
+    col_r_w    = SLIDE_W - col_r_x - Cm(0.3)
+    content_inner_h = content_h - Cm(0.3)
+
+    # Séparateur vertical gris clair
+    _add_rect(slide, sep_x, content_top + Cm(0.2), Cm(0.05), content_h - Cm(0.4), fill_color=GRIS_SEP)
+
+    # Titre colonne gauche (en bordeaux, Arial 11pt bold)
+    titre_g = "Analyse" if not col_gauche_items else "Observations clés"
+    _add_textbox(
+        slide, col_left_x, content_top + Cm(0.2), col_l_w, Cm(0.55),
+        titre_g, font_size=11, bold=True, color=BORDEAUX,
+    )
+    col_g_top = content_top + Cm(0.85)
+    col_g_h   = content_inner_h - Cm(0.85)
+
     if col_gauche_items:
         _add_bullet_textbox(
-            slide, col_l_left, content_top, col_l_w, content_h,
+            slide, col_left_x, col_g_top, col_l_w, col_g_h,
             col_gauche_items, font_size=10, color=GRIS_FONCE,
-            title=col_gauche_text, title_size=11,
+            title=col_gauche_text, title_size=10,
         )
     else:
         _add_textbox(
-            slide, col_l_left, content_top, col_l_w, content_h,
+            slide, col_left_x, col_g_top, col_l_w, col_g_h,
             col_gauche_text, font_size=10, color=GRIS_FONCE,
         )
 
-    # Colonne droite
+    # Titre colonne droite
+    t_droite = titre_droite or "Benchmark sectoriel"
     _add_textbox(
-        slide, col_r_left, content_top, col_r_w, content_h,
+        slide, col_r_x, content_top + Cm(0.2), col_r_w, Cm(0.55),
+        t_droite, font_size=11, bold=True, color=BORDEAUX,
+    )
+    _add_textbox(
+        slide, col_r_x, content_top + Cm(0.85), col_r_w, content_inner_h - Cm(0.85),
         col_droite_text, font_size=10, color=GRIS_FONCE,
     )
 
-    # Encadré bordeaux bas (so_what)
-    so_what_top = Cm(16.5)
-    so_what_h = Cm(1.8)
-    rect_sw = _add_rect(slide, Cm(0), so_what_top, SLIDE_W, so_what_h, fill_color=BORDEAUX)
-    sw_label = f"So what ? pour {entreprise_cible} : "
+    # ── FOOTER bordeaux — So what ? + confidentiel ──────────────────────────
+    footer_top = SLIDE_H - FOOTER_H
+    _add_rect(slide, Cm(0), footer_top, SLIDE_W, FOOTER_H, fill_color=BORDEAUX)
+
+    # Ligne 1 — So what ?
+    sw_h = Cm(1.4)
     _add_textbox(
-        slide, Cm(0.3), so_what_top, SLIDE_W - Cm(0.3), so_what_h,
-        sw_label + so_what_text, font_size=10, color=BLANC,
+        slide, Cm(0.4), footer_top + Cm(0.1), SLIDE_W - Cm(0.5), sw_h,
+        f"▶ So what ? pour {entreprise_cible} : {so_what_text}",
+        font_size=10, bold=False, color=BLANC,
     )
 
-    _footer(slide, nom_mission, entreprise_cible)
+    # Ligne 2 — Confidentiel + logo zone
+    conf_top = footer_top + sw_h + Cm(0.05)
+    conf_h   = FOOTER_H - sw_h - Cm(0.1)
+    _add_textbox(
+        slide, Cm(0.4), conf_top, SLIDE_W * 0.7, conf_h,
+        f"Confidentiel — {nom_mission}  ·  LMS ORH",
+        font_size=8, color=BORDEAUX_CLAIR,
+    )
+
+    # Logo LMS dans footer (à droite)
+    if LOGO_PATH:
+        try:
+            logo_w  = Cm(3.2)
+            logo_h  = Cm(1.0)
+            logo_left = SLIDE_W - logo_w - Cm(0.3)
+            logo_top  = footer_top + (FOOTER_H - logo_h) / 2
+            slide.shapes.add_picture(str(LOGO_PATH), logo_left, logo_top, logo_w, logo_h)
+        except Exception:
+            pass
+
     return slide
 
 
@@ -223,76 +264,107 @@ def _content_slide(prs, titre, col_gauche_text, col_droite_text, so_what_text,
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _slide_cover(prs, analysis, mission_config):
-    """Slide 1 — Couverture."""
+    """
+    Slide 1 — Couverture
+    ┌──────────────────┬───────────────────────────────────┐
+    │  Mosaïque LMS    │  BENCHMARK RH  (BORDEAUX bold)    │
+    │  (35% largeur)   │  Nom de la mission                │
+    │  fond bordeaux   │  Entreprise cible  (bordeaux)     │
+    │  si pas d'image  │  Secteur | Géographie  (gris)     │
+    │                  │  Date                             │
+    │                  │  [Logo LMS]                       │
+    └──────────────────┴───────────────────────────────────┘
+    """
     nom_mission = mission_config.get("nom_mission", "Mission RH")
     entreprise_cible = mission_config.get("entreprise_cible", "Entreprise")
     secteur = mission_config.get("secteur", "")
+    geographie = mission_config.get("geographie", "")
+    concurrent = mission_config.get("concurrent_reference", "") or ""
 
     slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(slide_layout)
 
-    # Panneau gauche bordeaux (8cm de large)
-    panneau_w = Cm(8)
-    rect_left = _add_rect(slide, Cm(0), Cm(0), panneau_w, SLIDE_H, fill_color=BORDEAUX)
+    # ── Panneau gauche 35% ───────────────────────────────────────────────────
+    panneau_w = SLIDE_W * 0.35   # ~11.85cm
+    _add_rect(slide, Cm(0), Cm(0), panneau_w, SLIDE_H, fill_color=BORDEAUX)
 
-    # Si mosaïque disponible, l'afficher par-dessus
     if MOSAIC_PATH:
         try:
-            slide.shapes.add_picture(
-                str(MOSAIC_PATH), Cm(0), Cm(0), panneau_w, SLIDE_H
-            )
+            slide.shapes.add_picture(str(MOSAIC_PATH), Cm(0), Cm(0), panneau_w, SLIDE_H)
         except Exception:
-            pass  # fallback bordeaux uni
+            pass
 
-    # Zone droite
-    right_left = panneau_w + Cm(0.8)
-    right_w = SLIDE_W - panneau_w - Cm(1.2)
-
-    # Titre BENCHMARK RH
+    # Bandeau bordeaux semi-transparent en bas du panneau gauche (sur mosaïque)
+    _add_rect(slide, Cm(0), SLIDE_H - Cm(2.5), panneau_w, Cm(2.5), fill_color=BORDEAUX)
     _add_textbox(
-        slide, right_left, Cm(3), right_w, Cm(1.8),
-        "BENCHMARK RH", font_size=28, bold=True, color=BORDEAUX,
+        slide, Cm(0.3), SLIDE_H - Cm(2.3), panneau_w - Cm(0.4), Cm(2.0),
+        "LMS ORH", font_size=14, bold=True, color=BLANC, align=PP_ALIGN.CENTER,
     )
 
-    # Nom de la mission
+    # ── Zone droite fond blanc ───────────────────────────────────────────────
+    right_x = panneau_w + Cm(0.1)
+    right_w = SLIDE_W - right_x - Cm(0.5)
+    _add_rect(slide, panneau_w, Cm(0), SLIDE_W - panneau_w, SLIDE_H, fill_color=BLANC)
+
+    # Type de livrable (petite étiquette bordeaux)
     _add_textbox(
-        slide, right_left, Cm(5), right_w, Cm(1.4),
-        nom_mission, font_size=22, bold=False, color=GRIS_FONCE,
+        slide, right_x, Cm(1.5), right_w, Cm(0.7),
+        "BENCHMARK RH — MISSION CONSULTANT",
+        font_size=10, bold=True, color=BORDEAUX,
     )
 
-    # Entreprise cible
+    # Titre mission (Arial Black 24pt)
     _add_textbox(
-        slide, right_left, Cm(6.6), right_w, Cm(1),
-        entreprise_cible, font_size=18, bold=False, color=BORDEAUX,
+        slide, right_x, Cm(2.5), right_w, Cm(2.2),
+        nom_mission, font_size=24, bold=True, color=GRIS_FONCE,
     )
 
-    # Secteur
+    # Entreprise cible (bordeaux, 20pt)
     _add_textbox(
-        slide, right_left, Cm(7.8), right_w, Cm(0.8),
-        secteur, font_size=14, bold=False, color=GRIS_FONCE,
+        slide, right_x, Cm(5.0), right_w, Cm(1.3),
+        entreprise_cible, font_size=20, bold=True, color=BORDEAUX,
     )
+
+    # Secteur | Géographie
+    sect_geo = f"{secteur}  |  {geographie}" if geographie else secteur
+    _add_textbox(
+        slide, right_x, Cm(6.5), right_w, Cm(0.8),
+        sect_geo, font_size=12, bold=False, color=GRIS_FONCE,
+    )
+
+    # Référence comparative (si renseignée)
+    if concurrent:
+        _add_textbox(
+            slide, right_x, Cm(7.5), right_w, Cm(0.7),
+            f"Référence : {concurrent}", font_size=11, bold=False, color=RGBColor(100, 100, 100),
+        )
+        date_top = Cm(8.4)
+    else:
+        date_top = Cm(7.5)
 
     # Date
     date_str = datetime.now().strftime("%d %B %Y")
     _add_textbox(
-        slide, right_left, Cm(9), right_w, Cm(0.7),
-        date_str, font_size=12, bold=False, color=GRIS_FONCE,
+        slide, right_x, date_top, right_w, Cm(0.7),
+        date_str, font_size=11, bold=False, color=GRIS_FONCE,
     )
 
-    # Mention cabinet
+    # Mention confidentielle
     _add_textbox(
-        slide, right_left, Cm(17.5), right_w, Cm(0.8),
-        "LMS ORH — Organisation & Ressources Humaines",
-        font_size=11, bold=False, color=GRIS_FONCE,
+        slide, right_x, SLIDE_H - Cm(2.0), right_w, Cm(0.6),
+        "Document confidentiel — LMS ORH",
+        font_size=9, bold=False, color=RGBColor(150, 150, 150),
     )
 
-    # Logo LMS si disponible
+    # Logo LMS
     if LOGO_PATH:
         try:
-            logo_w = Cm(4)
-            logo_left = SLIDE_W - logo_w - Cm(0.5)
+            logo_w = Cm(4.5)
+            logo_h = Cm(1.8)
             slide.shapes.add_picture(
-                str(LOGO_PATH), logo_left, SLIDE_H - Cm(2), logo_w, Cm(1.6)
+                str(LOGO_PATH),
+                SLIDE_W - logo_w - Cm(0.5), SLIDE_H - logo_h - Cm(0.3),
+                logo_w, logo_h,
             )
         except Exception:
             pass
@@ -306,6 +378,18 @@ def _slide_contexte(prs, analysis, mission_config):
     texte = ctx.get("texte", "")
     angle = ctx.get("angle_rh", "")
     angle_strategique = mission_config.get("angle_strategique_rh", "")
+    geographie = mission_config.get("geographie", "")
+    concurrent = mission_config.get("concurrent_reference", "") or ""
+
+    droite_parts = []
+    if angle:
+        droite_parts.append(f"Angle RH central :\n{angle}")
+    if geographie:
+        droite_parts.append(f"Périmètre géographique :\n{geographie}")
+    if concurrent:
+        droite_parts.append(f"Référence comparative :\n{concurrent}")
+    droite_text = "\n\n".join(droite_parts) if droite_parts else angle
+
     so_what = (
         f"Question centrale : {angle_strategique}"
         if angle_strategique else angle or "Voir angle RH central."
@@ -314,9 +398,10 @@ def _slide_contexte(prs, analysis, mission_config):
         prs,
         titre="Contexte & Angle RH",
         col_gauche_text=texte,
-        col_droite_text=f"Angle RH central :\n\n{angle}",
+        col_droite_text=droite_text,
         so_what_text=so_what,
         mission_config=mission_config,
+        titre_droite="Cadrage de la mission",
     )
 
 
@@ -424,39 +509,49 @@ def _slide_recommandations(prs, analysis, mission_config):
     slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(slide_layout)
 
-    # Barre bordeaux haut
-    barre_h = Cm(1.8)
-    _add_rect(slide, Cm(0), Cm(0), SLIDE_W, barre_h, fill_color=BORDEAUX)
+    # ── Header bordeaux ──────────────────────────────────────────────────────
+    _add_rect(slide, Cm(0), Cm(0), SLIDE_W, HEADER_H, fill_color=BORDEAUX)
     _add_textbox(
-        slide, Cm(0.4), Cm(0), SLIDE_W, barre_h,
+        slide, Cm(0.5), Cm(0.3), SLIDE_W - Cm(1), HEADER_H - Cm(0.3),
         "Recommandations Mission", font_size=18, bold=True, color=BLANC,
     )
+
+    # Fond blanc zone contenu
+    content_h_reco = SLIDE_H - HEADER_H - FOOTER_H
+    _add_rect(slide, Cm(0), HEADER_H, SLIDE_W, content_h_reco, fill_color=BLANC)
 
     # 3 blocs côte à côte
     bloc_w = (SLIDE_W - Cm(2)) / 3
     gap = Cm(0.5)
-    bloc_top = barre_h + Cm(0.5)
-    bloc_h = Cm(13)
+    bloc_top = HEADER_H + Cm(0.4)
+    bloc_h = content_h_reco - Cm(0.6)
 
     priorite_colors = {"Haute": BORDEAUX, "Moyenne": RGBColor(230, 126, 34), "Faible": GRIS_FONCE}
 
     for i, rec in enumerate(recs[:3]):
         left = Cm(0.5) + i * (bloc_w + gap)
 
-        # Fond gris clair
-        rect_bloc = _add_rect(slide, left, bloc_top, bloc_w, bloc_h, fill_color=GRIS_CLAIR)
+        # Fond gris clair + bordure bordeaux gauche du bloc
+        _add_rect(slide, left, bloc_top, bloc_w, bloc_h, fill_color=GRIS_CLAIR)
+        _add_rect(slide, left, bloc_top, Cm(0.15), bloc_h, fill_color=BORDEAUX)
+
+        # Numéro de reco
+        _add_textbox(
+            slide, left + Cm(0.35), bloc_top + Cm(0.15), bloc_w - Cm(0.5), Cm(0.6),
+            f"RECOMMANDATION {i+1}", font_size=8, bold=True, color=BORDEAUX,
+        )
 
         # Titre de la reco (bordeaux)
         action = rec.get("action", f"Recommandation {i+1}")
         _add_textbox(
-            slide, left + Cm(0.2), bloc_top + Cm(0.2), bloc_w - Cm(0.4), Cm(1.8),
-            action, font_size=11, bold=True, color=BORDEAUX,
+            slide, left + Cm(0.35), bloc_top + Cm(0.75), bloc_w - Cm(0.5), Cm(1.8),
+            action, font_size=11, bold=True, color=GRIS_FONCE,
         )
 
         # Justification
         justif = rec.get("justification", "")
         _add_textbox(
-            slide, left + Cm(0.2), bloc_top + Cm(2.2), bloc_w - Cm(0.4), Cm(4),
+            slide, left + Cm(0.35), bloc_top + Cm(2.6), bloc_w - Cm(0.5), Cm(4.5),
             justif, font_size=9, color=GRIS_FONCE,
         )
 
@@ -464,25 +559,43 @@ def _slide_recommandations(prs, analysis, mission_config):
         priorite = rec.get("priorite", "Moyenne")
         p_color = priorite_colors.get(priorite, GRIS_FONCE)
         _add_textbox(
-            slide, left + Cm(0.2), bloc_top + Cm(6.5), bloc_w - Cm(0.4), Cm(0.7),
-            f"Priorité : {priorite}", font_size=9, bold=True, color=p_color,
+            slide, left + Cm(0.35), bloc_top + Cm(7.3), bloc_w - Cm(0.5), Cm(0.65),
+            f"● Priorité : {priorite}", font_size=9, bold=True, color=p_color,
         )
 
-        # KPI (vert)
+        # KPI
         kpi = rec.get("kpi", "")
         _add_textbox(
-            slide, left + Cm(0.2), bloc_top + Cm(7.4), bloc_w - Cm(0.4), Cm(2.5),
+            slide, left + Cm(0.35), bloc_top + Cm(8.1), bloc_w - Cm(0.5), Cm(2.0),
             f"KPI : {kpi}", font_size=9, color=VERT_KPI,
         )
 
         # Horizon
         horizon = rec.get("horizon", "")
         _add_textbox(
-            slide, left + Cm(0.2), bloc_top + Cm(10), bloc_w - Cm(0.4), Cm(0.8),
-            f"Horizon : {horizon}", font_size=9, color=GRIS_FONCE,
+            slide, left + Cm(0.35), bloc_top + bloc_h - Cm(1.1), bloc_w - Cm(0.5), Cm(0.8),
+            f"Horizon : {horizon}", font_size=9, bold=False, color=GRIS_FONCE,
         )
 
-    _footer(slide, nom_mission, entreprise_cible)
+    # Footer bordeaux
+    footer_top = SLIDE_H - FOOTER_H
+    _add_rect(slide, Cm(0), footer_top, SLIDE_W, FOOTER_H, fill_color=BORDEAUX)
+    _add_textbox(
+        slide, Cm(0.4), footer_top + Cm(0.7), SLIDE_W * 0.7, FOOTER_H - Cm(0.8),
+        f"Confidentiel — {nom_mission}  ·  LMS ORH",
+        font_size=8, color=BORDEAUX_CLAIR,
+    )
+    if LOGO_PATH:
+        try:
+            logo_w, logo_h = Cm(3.2), Cm(1.0)
+            slide.shapes.add_picture(
+                str(LOGO_PATH),
+                SLIDE_W - logo_w - Cm(0.3),
+                footer_top + (FOOTER_H - logo_h) / 2,
+                logo_w, logo_h,
+            )
+        except Exception:
+            pass
     return slide
 
 

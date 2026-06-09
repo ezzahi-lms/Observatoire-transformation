@@ -21,22 +21,107 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT_MISSION = """Tu es un expert senior en transformation RH et organisationnelle, associé chez LMS ORH — cabinet de conseil au Maroc & Afrique.
 
-Ta mission : produire un benchmark stratégique personnalisé pour la mission : {nom_mission}
-Entreprise cible : {entreprise_cible} — Secteur : {secteur}
+MISSION : Produire un benchmark RH factuel et actionnable pour la mission "{nom_mission}".
+Entreprise cible : {entreprise_cible} — Secteur : {secteur} — Géographie : {geographie}
 Question centrale : {angle_strategique_rh}
+Référence comparative : {concurrent_reference}
+(Si vide, compare aux leaders reconnus du secteur dans la géographie indiquée)
 
-Pour chaque axe analysé, applique systématiquement le filtre de lecture RH :
+FILTRE RH OBLIGATOIRE PAR AXE :
 1. BUSINESS MODEL → compétences émergentes/obsolètes, nouveaux profils, impacts pyramide des âges
 2. ORGANISATION → évolution effectifs, nouveaux modèles org (agile, matriciel, plateforme), rôles créés/supprimés/transformés
 3. GOUVERNANCE → instances RH (CODIR, comités sociaux), politiques sociales, conformité droit du travail
 4. INNOVATION MANAGÉRIALE → pratiques différenciantes, outils RH innovants (IA RH, SIRH, analytics), expérience employé
 
-Règles de format :
-- Commence chaque section par un chiffre ou un fait vérifiable
-- Nomme au moins 1 entreprise ou initiative réelle par axe
-- Termine chaque axe par : "Ce que cela signifie pour {entreprise_cible} : [2-3 lignes]"
-- Niveau de certitude : confirmé / probable / à vérifier
-- Langue : français, registre consultant senior"""
+RÈGLES ABSOLUES — NON NÉGOCIABLES :
+1. Chaque axe cite OBLIGATOIREMENT au moins 2 chiffres récents (année ≥ 2023) avec leur source [N]
+2. Chaque axe nomme OBLIGATOIREMENT au moins 2 entreprises réelles du secteur avec un fait précis
+3. Chaque "So what ?" est SPÉCIFIQUE à {entreprise_cible} — jamais générique
+4. Si "concurrent_reference" est renseigné, une comparaison explicite apparaît dans chaque axe
+5. INTERDIT : "a tendance à", "doit mettre en place", "les entreprises du secteur généralement" sans fait concret issu des sources
+6. Commence chaque axe par un chiffre clé ou un fait vérifiable
+7. Niveau de certitude à indiquer : [confirmé] / [probable] / [à vérifier]
+8. Langue : français, registre consultant senior"""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  PROMPTS SPÉCIFIQUES PAR SLIDE OPTIONNELLE
+# ─────────────────────────────────────────────────────────────────────────────
+
+PROMPTS_SLIDES_OPTIONNELLES = {
+    "effectifs_dimensionnement": (
+        "Effectifs & dimensionnement — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Effectif moyen des acteurs du secteur de taille similaire à {entreprise_cible}\n"
+        "- Ratio cadres / non-cadres observé dans le secteur\n"
+        "- Tendance des effectifs sur 3 ans (croissance / réduction / stabilité)\n"
+        "- Fonctions externalisées vs internalisées les plus fréquentes\n"
+        "- Benchmark avec {concurrent_reference} si disponible\n"
+        "Cite tes sources [N] et l'année de chaque donnée. INTERDIT d'inventer des chiffres."
+    ),
+    "recrutement_talent": (
+        "Recrutement & talent acquisition — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Délai moyen de recrutement (time-to-hire) dans le secteur\n"
+        "- Top 3 postes en tension (difficiles à recruter en 2024-2025)\n"
+        "- Canaux de recrutement privilégiés par les leaders du secteur\n"
+        "- Fourchettes salariales pour 3 profils RH clés\n"
+        "- Pratique innovante de recrutement observée chez un acteur nommé\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "formation_competences": (
+        "Formation & développement des compétences — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Budget formation moyen (% masse salariale) dans le secteur\n"
+        "- Compétences prioritaires financées en formation (top 5 en 2024-2025)\n"
+        "- Modalités dominantes : présentiel, e-learning, blended, coaching\n"
+        "- Exemple d'académie interne ou programme phare d'un acteur nommé\n"
+        "- Réglementations formation applicables en {geographie}\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "culture_engagement": (
+        "Culture organisationnelle & engagement — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Taux d'engagement moyen dans le secteur (si données disponibles)\n"
+        "- Pratiques de reconnaissance et fidélisation observées\n"
+        "- Classements Great Place to Work ou équivalent dans le secteur\n"
+        "- Exemple concret de transformation culturelle réussie (acteur nommé + résultats mesurés)\n"
+        "- Principaux facteurs de démission identifiés dans le secteur\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "remuneration_social": (
+        "Rémunération & politique sociale — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Fourchettes de rémunération pour 3 postes RH de référence\n"
+        "- Avantages sociaux différenciants observés dans le secteur\n"
+        "- Politique d'intéressement / participation / actionnariat si applicable\n"
+        "- Évolution des salaires sur 2 ans dans le secteur\n"
+        "- Comparaison rémunération fixe vs variable (mix observé)\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "sirh_digitalisation": (
+        "SIRH & digitalisation RH — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Solutions SIRH les plus déployées dans le secteur (top 3 avec % adoption)\n"
+        "- Use cases IA RH déjà déployés chez des acteurs nommés\n"
+        "- ROI ou bénéfices mesurés après déploiement SIRH (si données)\n"
+        "- Obstacles à la digitalisation RH identifiés dans le secteur\n"
+        "- Benchmark {concurrent_reference} sur la maturité digitale RH\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "diversite_inclusion": (
+        "Diversité, équité & inclusion — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Taux de féminisation des postes de direction dans le secteur\n"
+        "- Engagements DEI formalisés par les leaders du secteur\n"
+        "- Réglementations DEI applicables en {geographie}\n"
+        "- Exemple de programme DEI reconnu (acteur nommé + indicateurs)\n"
+        "- Indicateurs DEI suivis par les entreprises les plus avancées\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "relations_sociales": (
+        "Relations sociales & dialogue social — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Taux de syndicalisation moyen dans le secteur\n"
+        "- Principaux accords collectifs récents dans le secteur (2023-2025)\n"
+        "- Conflits sociaux notables si applicable\n"
+        "- Pratiques de dialogue social innovantes (acteur nommé)\n"
+        "- Cadre légal du dialogue social applicable en {geographie}\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -339,14 +424,55 @@ def _format_articles(articles: List[Dict], summary_len: int = 400) -> str:
 
 def _call_anthropic(client, model: str, max_tokens: int, system_text: str,
                     tool: dict, tool_name: str, user_prompt: str) -> dict:
-    """Appel Anthropic avec tool_use pour sortie JSON structurée."""
+    """
+    Appel Anthropic avec tool_use pour sortie JSON structurée.
+    Si le modèle supporte web_search, effectue d'abord une recherche web
+    pour enrichir les données avant la sortie structurée.
+    """
+    # Étape 1 — Recherche web préliminaire (si claude-3.5+/claude-sonnet-4+)
+    research_context = ""
+    try:
+        research_resp = client.messages.create(
+            model=model,
+            max_tokens=1500,
+            system=system_text,
+            tools=[{"type": "web_search_20250305", "name": "web_search"}],
+            tool_choice={"type": "auto"},
+            messages=[{
+                "role": "user",
+                "content": (
+                    "Effectue des recherches web pour enrichir le benchmark. "
+                    "Cherche des chiffres récents (2023-2025) et des entreprises réelles du secteur. "
+                    "Synthétise tes trouvailles en bullet points courts avec sources et années.\n\n"
+                    + user_prompt[:800]
+                ),
+            }],
+        )
+        for block in research_resp.content:
+            if hasattr(block, "text") and block.text:
+                research_context = block.text
+                logger.info(f"Web search Anthropic — {len(research_context)} chars collectés")
+                break
+    except Exception as e:
+        # web_search non disponible sur ce compte/modèle — on continue sans
+        logger.info(f"Web search ignoré (non disponible) : {e}")
+
+    # Étape 2 — Sortie JSON structurée (avec contexte de recherche si dispo)
+    enriched_prompt = user_prompt
+    if research_context:
+        enriched_prompt = (
+            user_prompt
+            + "\n\n**Données issues de la recherche web (à intégrer obligatoirement) :**\n"
+            + research_context
+        )
+
     resp = client.messages.create(
         model=model,
         max_tokens=max_tokens,
         system=[{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}],
         tools=[tool],
         tool_choice={"type": "tool", "name": tool_name},
-        messages=[{"role": "user", "content": user_prompt}],
+        messages=[{"role": "user", "content": enriched_prompt}],
     )
     for block in resp.content:
         if block.type == "tool_use" and block.name == tool_name:
@@ -558,7 +684,9 @@ def analyze_mission(
     nom_mission = mission_config.get("nom_mission", "Mission RH")
     entreprise_cible = mission_config.get("entreprise_cible", "Entreprise")
     secteur = mission_config.get("secteur", "")
+    geographie = mission_config.get("geographie", "Maroc")
     angle = mission_config.get("angle_strategique_rh", "")
+    concurrent_reference = mission_config.get("concurrent_reference", "") or "Non renseigné"
     periode = mission_config.get("periode", "6 derniers mois")
     mode = mission_config.get("mode", "Rapide")
     slides_optionnelles = mission_config.get("slides_optionnelles", [])
@@ -567,7 +695,9 @@ def analyze_mission(
         nom_mission=nom_mission,
         entreprise_cible=entreprise_cible,
         secteur=secteur,
+        geographie=geographie,
         angle_strategique_rh=angle,
+        concurrent_reference=concurrent_reference,
     )
 
     # Pour Gemini / Groq free tier : limiter articles et longueur des résumés
@@ -588,13 +718,41 @@ def analyze_mission(
     reports_dir = Path(settings.get("reporting", {}).get("output_dir", "reports"))
     reports_dir.mkdir(exist_ok=True)
 
+    # Prompts spécifiques pour les slides optionnelles demandées
+    slides_prompts_extra = ""
+    for sl_key in slides_optionnelles:
+        if sl_key in PROMPTS_SLIDES_OPTIONNELLES:
+            prompt_tpl = PROMPTS_SLIDES_OPTIONNELLES[sl_key]
+            slides_prompts_extra += (
+                f"\n\n--- SLIDE OPTIONNELLE : {sl_key} ---\n"
+                + prompt_tpl.format(
+                    secteur=secteur,
+                    geographie=geographie,
+                    entreprise_cible=entreprise_cible,
+                    concurrent_reference=concurrent_reference,
+                )
+            )
+
+    concurrent_line = (
+        f"\nRéférence comparative : **{concurrent_reference}** "
+        "(comparer explicitement dans chaque axe)"
+        if concurrent_reference and concurrent_reference != "Non renseigné"
+        else ""
+    )
+
     base_prompt = f"""Benchmark RH Mission — **{nom_mission}**
-Entreprise cible : **{entreprise_cible}** — Secteur : **{secteur}**
+Entreprise cible : **{entreprise_cible}** — Secteur : **{secteur}** — Géographie : **{geographie}**
 Angle stratégique : {angle}
-Période couverte : {periode}
+Période couverte : {periode}{concurrent_line}
+
+RAPPEL RÈGLES ABSOLUES :
+- Citer au minimum 2 chiffres réels (≥ 2023) avec source [N] par axe
+- Nommer au minimum 2 entreprises réelles du secteur par axe
+- "So what ?" SPÉCIFIQUE à {entreprise_cible} sur chaque slide
+- INTERDIT de généraliser sans fait concret issu des sources ci-dessous
 
 **Sources collectées (citer via [N]) :**
-{articles_text}"""
+{articles_text}{slides_prompts_extra}"""
 
     # ─────────────────────────────────────────────────────────────────────────
     #  MODE RAPIDE : 1 appel
