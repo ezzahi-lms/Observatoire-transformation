@@ -403,40 +403,85 @@ def generate_infographie_html(
     config_client: Optional[Dict] = None,
 ) -> str:
     """
-    Génère l'infographie HTML 1 page (version client — format email / LinkedIn).
+    Génère l'infographie HTML 1 page — style McKinsey Charts.
+
+    Design : fond blanc pur · navy #051C2C · bleu #1B4ECD · typo serrée ·
+    grand chiffre hero · barre CSS · règles fines 1 px · labels UPPERCASE ·
+    zéro arrondi · zéro ombre · largeur email 600 px.
     """
+    import re as _re
+
     ip   = report_data.get("innovation_phare", {})
     sf1  = report_data.get("signal_faible_1", {})
     sf2  = report_data.get("signal_faible_2", {})
     meta = report_data.get("_meta", {})
 
-    secteur     = meta.get("secteur", report_data.get("secteur", ""))
-    mois        = meta.get("mois", report_data.get("mois", ""))
-    nom_client  = (config_client or {}).get("nom", "")
-    email_cons  = (config_client or {}).get("email_consultant", "contact@lms-orh.com")
-    nom_cons    = (config_client or {}).get("nom_consultant", "LMS ORH")
+    secteur    = meta.get("secteur",  report_data.get("secteur", ""))
+    mois       = meta.get("mois",     report_data.get("mois", ""))
+    nom_client = (config_client or {}).get("nom", "")
+    email_cons = (config_client or {}).get("email_consultant", "contact@lms-orh.com")
+    nom_cons   = (config_client or {}).get("nom_consultant", "LMS ORH")
 
-    question = (
-        f"Cette évolution concerne-t-elle {nom_client} ?"
-        if nom_client else
-        "L'une de ces évolutions vous concerne ?"
-    )
+    # ── Palette McKinsey ──────────────────────────────────────────────────────
+    NAVY   = "#051C2C"   # texte principal, labels, footer
+    BLUE   = "#1B4ECD"   # accent, barre, lien, badge horizon
+    BLUE_L = "#EBF0FB"   # fond callout "ce que ça change"
+    RULE   = "#DCDCDC"   # règles horizontales
+    GRAY2  = "#5E6D7A"   # texte secondaire
+    GRAY3  = "#8C9BAA"   # texte tertiaire / source
+    BG     = "#FFFFFF"   # fond total
+    BGS    = "#F7F8FA"   # fond section signaux
 
-    # Chercher le logo LMS
-    assets_dir  = Path(__file__).parent.parent / "assets"
-    logo_b64    = ""
-    for name in ("logo_lms.png", "Logo LMS.png", "logo_lms.jpg"):
-        p = assets_dir / name
-        if p.exists():
-            import base64
-            logo_b64 = base64.b64encode(p.read_bytes()).decode()
+    # ── Logo LMS (base64 ou wordmark texte) ──────────────────────────────────
+    assets_dir = Path(__file__).parent.parent / "assets"
+    logo_b64   = ""
+    for _n in ("logo_lms.png", "Logo LMS.png", "logo_lms_dark.png", "logo_lms.jpg"):
+        _p = assets_dir / _n
+        if _p.exists():
+            import base64 as _b64
+            logo_b64 = _b64.b64encode(_p.read_bytes()).decode()
             break
 
-    logo_tag = (
-        f'<img src="data:image/png;base64,{logo_b64}" height="36" alt="LMS ORH" '
-        f'style="vertical-align:middle;"/>'
-        if logo_b64 else
-        '<span style="font-size:18px;font-weight:bold;color:white;">LMS ORH</span>'
+    if logo_b64:
+        logo_html = (
+            f'<img src="data:image/png;base64,{logo_b64}" height="28" alt="LMS ORH" '
+            f'style="display:block;"/>'
+        )
+    else:
+        logo_html = (
+            f'<span style="font-family:\'Helvetica Neue\',Arial,sans-serif;'
+            f'font-size:15px;font-weight:700;letter-spacing:.5px;color:{NAVY};">LMS ORH</span>'
+        )
+
+    # ── Barre CSS pour le chiffre clé (si %) ─────────────────────────────────
+    chiffre_raw = ip.get("chiffre_cle", "")
+    pct_m = _re.search(r"(\d+)\s*%", chiffre_raw)
+    bar_html = ""
+    if pct_m:
+        pct = min(int(pct_m.group(1)), 100)
+        bar_html = f"""
+        <div style="margin:20px 0 4px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="flex:1;height:6px;background:#E2E8F2;">
+              <div style="width:{pct}%;height:6px;background:{BLUE};"></div>
+            </div>
+            <span style="font-size:11px;font-weight:700;color:{BLUE};
+                         min-width:32px;text-align:right;">{pct}%</span>
+          </div>
+        </div>"""
+
+    # ── Horizon badges (texte épuré) ──────────────────────────────────────────
+    def _horizon(text: str, color: str = BLUE) -> str:
+        return (
+            f'<span style="font-size:9px;font-weight:700;letter-spacing:1.2px;'
+            f'text-transform:uppercase;color:{color};">{text}</span>'
+        )
+
+    # ── CTA ───────────────────────────────────────────────────────────────────
+    cta_q = (
+        f"Cette évolution concerne-t-elle {nom_client}&nbsp;?"
+        if nom_client else
+        "Ces évolutions concernent-elles votre organisation&nbsp;?"
     )
 
     html = f"""<!DOCTYPE html>
@@ -446,87 +491,160 @@ def generate_infographie_html(
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Veille Innovation RH — {secteur} — {mois}</title>
 </head>
-<body style="margin:0;padding:20px;background:#EFEFEF;font-family:Arial,sans-serif;">
-<div style="max-width:680px;margin:0 auto;background:{WHITE};border-radius:6px;
-            overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.12);">
+<body style="margin:0;padding:24px 16px;background:#EDEEF0;
+             font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
 
-  <!-- BLOC 1 — EN-TÊTE LMS -->
-  <div style="background:{BORDEAUX};padding:20px 28px;">
-    {logo_tag}
-    <div style="color:white;font-size:11px;margin-top:10px;letter-spacing:.8px;">
-      VEILLE INNOVATION RH &nbsp;·&nbsp; {secteur.upper()} &nbsp;·&nbsp; {mois.upper()}
+<div style="max-width:600px;margin:0 auto;background:{BG};">
+
+  <!-- ══ BANDE TOP ══ -->
+  <div style="height:4px;background:{NAVY};"></div>
+
+  <!-- ══ EN-TÊTE ══ -->
+  <div style="padding:20px 32px 16px;border-bottom:1px solid {RULE};
+              display:flex;justify-content:space-between;align-items:center;">
+    <div>{logo_html}</div>
+    <div style="text-align:right;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.4px;
+                  text-transform:uppercase;color:{GRAY2};">
+        VEILLE INNOVATION RH
+      </div>
+      <div style="font-size:10px;color:{GRAY3};margin-top:2px;">
+        {secteur} &nbsp;·&nbsp; {mois}
+      </div>
     </div>
   </div>
 
-  <!-- BLOC 2 — INNOVATION PHARE -->
-  <div style="background:{WHITE};border-left:6px solid {BORDEAUX};padding:24px 28px;">
-    <span style="background:{BORDEAUX};color:white;font-size:10px;padding:3px 10px;
-                 border-radius:3px;text-transform:uppercase;letter-spacing:.5px;">
-      ★ Innovation du mois
-    </span>
-    <div style="font-size:32px;font-weight:bold;color:{BORDEAUX};margin:14px 0 4px;
-                line-height:1.1;">
-      {ip.get("chiffre_cle", "")}
+  <!-- ══ INNOVATION PHARE ══ -->
+  <div style="padding:28px 32px 24px;">
+
+    <!-- Label catégorie -->
+    <div style="font-size:9px;font-weight:700;letter-spacing:1.6px;
+                text-transform:uppercase;color:{BLUE};margin-bottom:18px;">
+      Innovation du mois
     </div>
-    <div style="font-size:17px;font-weight:bold;color:{DARK};margin-bottom:12px;">
+
+    <!-- Chiffre hero -->
+    <div style="font-size:52px;font-weight:700;color:{NAVY};line-height:1;
+                letter-spacing:-1px;margin-bottom:6px;">
+      {chiffre_raw}
+    </div>
+
+    <!-- Titre -->
+    <div style="font-size:16px;font-weight:600;color:{NAVY};line-height:1.35;
+                margin-bottom:4px;">
       {ip.get("titre_client", "")}
     </div>
-    <div style="font-size:13px;color:{GRAY};line-height:1.65;">
+
+    <!-- Barre CSS -->
+    {bar_html}
+
+    <!-- Règle fine -->
+    <div style="height:1px;background:{RULE};margin:18px 0;"></div>
+
+    <!-- Description -->
+    <div style="font-size:13px;color:{GRAY2};line-height:1.7;margin-bottom:18px;">
       {ip.get("description_client", "")}
     </div>
-    <div style="background:{BORDEAUX_LT};border-radius:4px;padding:12px 16px;
-                margin-top:16px;font-size:12px;color:{BORDEAUX};line-height:1.5;">
-      <strong>Ce que ça change pour vous :</strong><br/>
-      {ip.get("so_what_client", "")}
+
+    <!-- Ce que ça change — callout McKinsey style (trait gauche + fond très léger) -->
+    <div style="border-left:3px solid {BLUE};background:{BLUE_L};
+                padding:12px 16px;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;
+                  text-transform:uppercase;color:{BLUE};margin-bottom:6px;">
+        Ce que ça change pour vous
+      </div>
+      <div style="font-size:13px;color:{NAVY};line-height:1.6;">
+        {ip.get("so_what_client", "")}
+      </div>
     </div>
+
   </div>
 
-  <!-- BLOC 3 — SIGNAL FAIBLE 1 -->
-  <div style="background:{GRAY_LT};border-left:4px solid {GRAY};
-              padding:16px 28px;margin-top:2px;">
-    <span style="background:{GRAY};color:white;font-size:9px;padding:2px 8px;
-                 border-radius:3px;text-transform:uppercase;letter-spacing:.4px;">
-      ◈ Signal à surveiller &nbsp;·&nbsp; {sf1.get("horizon_badge", "Dans 6-12 mois")}
-    </span>
-    <div style="font-size:15px;font-weight:bold;color:{DARK};margin:10px 0 5px;">
-      {sf1.get("titre_client", "")}
+  <!-- ══ RÈGLE SÉPARATRICE ══ -->
+  <div style="height:1px;background:{RULE};margin:0 32px;"></div>
+
+  <!-- ══ SIGNAUX À SURVEILLER ══ -->
+  <div style="background:{BGS};padding:22px 32px 24px;">
+
+    <div style="font-size:9px;font-weight:700;letter-spacing:1.6px;
+                text-transform:uppercase;color:{GRAY2};margin-bottom:18px;">
+      Signaux à surveiller
     </div>
-    <div style="font-size:12px;color:{GRAY};line-height:1.55;">
-      {sf1.get("description_client", "")}
-    </div>
+
+    <!-- 2 colonnes -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr valign="top">
+
+        <!-- Signal 1 -->
+        <td width="48%" style="padding-right:16px;">
+          <div style="height:2px;background:{NAVY};width:24px;margin-bottom:12px;"></div>
+          {_horizon(sf1.get("horizon_badge", "Dans 6–12 mois"))}
+          <div style="font-size:13px;font-weight:600;color:{NAVY};
+                      line-height:1.35;margin:7px 0 6px;">
+            {sf1.get("titre_client", "")}
+          </div>
+          <div style="font-size:12px;color:{GRAY2};line-height:1.6;">
+            {sf1.get("description_client", "")}
+          </div>
+        </td>
+
+        <!-- Séparateur vertical -->
+        <td width="4%" style="text-align:center;">
+          <div style="width:1px;background:{RULE};height:100%;
+                      margin:0 auto;min-height:80px;"></div>
+        </td>
+
+        <!-- Signal 2 -->
+        <td width="48%" style="padding-left:16px;">
+          <div style="height:2px;background:{BLUE};width:24px;margin-bottom:12px;"></div>
+          {_horizon(sf2.get("horizon_badge", "Dans 1–2 ans"), GRAY2)}
+          <div style="font-size:13px;font-weight:600;color:{NAVY};
+                      line-height:1.35;margin:7px 0 6px;">
+            {sf2.get("titre_client", "")}
+          </div>
+          <div style="font-size:12px;color:{GRAY2};line-height:1.6;">
+            {sf2.get("description_client", "")}
+          </div>
+        </td>
+
+      </tr>
+    </table>
+
   </div>
 
-  <!-- BLOC 4 — SIGNAL FAIBLE 2 -->
-  <div style="background:{GRAY_LT};border-left:4px solid {GRAY};
-              padding:16px 28px;margin-top:2px;">
-    <span style="background:{GRAY};color:white;font-size:9px;padding:2px 8px;
-                 border-radius:3px;text-transform:uppercase;letter-spacing:.4px;">
-      ◈ Signal à surveiller &nbsp;·&nbsp; {sf2.get("horizon_badge", "Dans 1-2 ans")}
-    </span>
-    <div style="font-size:15px;font-weight:bold;color:{DARK};margin:10px 0 5px;">
-      {sf2.get("titre_client", "")}
+  <!-- ══ RÈGLE SÉPARATRICE ══ -->
+  <div style="height:1px;background:{RULE};"></div>
+
+  <!-- ══ FOOTER ══ -->
+  <div style="padding:20px 32px 24px;">
+
+    <!-- CTA texte — style McKinsey : pas de bouton coloré, juste un lien souligné -->
+    <div style="font-size:13px;color:{NAVY};font-weight:600;margin-bottom:10px;">
+      {cta_q}
     </div>
-    <div style="font-size:12px;color:{GRAY};line-height:1.55;">
-      {sf2.get("description_client", "")}
+    <div style="font-size:12px;color:{GRAY2};margin-bottom:16px;">
+      Répondez directement à cet email ou écrivez à
+      <a href="mailto:{email_cons}"
+         style="color:{BLUE};text-decoration:underline;">{email_cons}</a>
     </div>
+
+    <!-- Règle fine footer -->
+    <div style="height:1px;background:{RULE};margin-bottom:14px;"></div>
+
+    <!-- Mention source -->
+    <div style="font-size:10px;color:{GRAY3};line-height:1.6;">
+      Source : LMS ORH — Veille Innovation RH &nbsp;·&nbsp;
+      {nom_cons} &nbsp;·&nbsp; {mois} &nbsp;·&nbsp;
+      Usage exclusif client — ne pas diffuser
+    </div>
+
   </div>
 
-  <!-- BLOC 5 — CTA -->
-  <div style="background:{DARK};padding:22px 28px;text-align:center;">
-    <div style="color:{WHITE};font-size:15px;font-weight:bold;margin-bottom:14px;">
-      {question}
-    </div>
-    <a href="mailto:{email_cons}"
-       style="background:{BORDEAUX};color:white;padding:11px 28px;border-radius:4px;
-              text-decoration:none;font-size:13px;display:inline-block;">
-      En discuter avec LMS
-    </a>
-    <div style="color:#AAAAAA;font-size:10px;margin-top:16px;line-height:1.6;">
-      {nom_cons} &nbsp;·&nbsp; LMS ORH &nbsp;·&nbsp; {email_cons}
-    </div>
-  </div>
+  <!-- ══ BANDE BAS ══ -->
+  <div style="height:3px;background:{RULE};"></div>
 
 </div>
+
 </body>
 </html>"""
     return html
