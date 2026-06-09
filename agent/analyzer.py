@@ -616,27 +616,53 @@ def _call_groq(model_name: str, max_tokens: int, system_text: str,
         f"SCHÉMA JSON DE SORTIE ATTENDU (respecter EXACTEMENT, "
         f"tous les champs `required` sont obligatoires) :\n"
         f"```json\n{schema_json}\n```\n"
-        f"Réponds UNIQUEMENT avec le JSON valide, sans texte autour."
+        f"RÈGLES IMPÉRATIVES POUR LA RÉPONSE :\n"
+        f"1. Réponds UNIQUEMENT avec le JSON valide, sans texte autour.\n"
+        f"2. INTERDIT de laisser un champ de texte vide (chaîne vide \"\"). "
+        f"Chaque champ de type string doit contenir au minimum 2-3 phrases substantielles.\n"
+        f"3. Utilise ta connaissance du secteur ET les sources fournies. "
+        f"Si une source ne couvre pas exactement le sujet, complète avec tes connaissances "
+        f"du secteur en citant des faits vérifiables.\n"
+        f"4. Les listes doivent contenir au minimum 3 éléments concrets et nommés."
     )
 
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": system_with_schema},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        max_tokens=max_tokens,
-        temperature=0.3,
-    )
+    last_error = None
+    for attempt in range(2):
+        try:
+            temperature = 0.3 if attempt == 0 else 0.5
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_with_schema},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            raw = response.choices[0].message.content.strip()
+            result = json.loads(raw)
+            logger.info(
+                f"{tool_name} (Groq/{model_name}) tentative {attempt+1} — "
+                f"{response.usage.prompt_tokens} in / {response.usage.completion_tokens} out"
+            )
+            # Détection réponse vide : si la plupart des champs string sont courts
+            str_vals = [v for v in result.values() if isinstance(v, str)]
+            if str_vals and sum(1 for v in str_vals if len(v.strip()) < 20) / len(str_vals) > 0.5:
+                logger.warning(f"Réponse Groq principalement vide (tentative {attempt+1})")
+                if attempt == 0:
+                    continue
+            return result
+        except Exception as e:
+            last_error = e
+            logger.warning(f"Groq tentative {attempt+1} échouée : {e}")
+            if attempt == 0:
+                continue
 
-    raw = response.choices[0].message.content.strip()
-    result = json.loads(raw)
-    logger.info(
-        f"{tool_name} (Groq/{model_name}) — "
-        f"{response.usage.prompt_tokens} in / {response.usage.completion_tokens} out"
+    raise RuntimeError(
+        f"Groq n'a pas produit de résultat utilisable après 2 tentatives. "
+        f"Dernière erreur : {last_error}"
     )
-    return result
 
 
 def _call_llm(provider: str, model: str, max_tokens: int, system_text: str,

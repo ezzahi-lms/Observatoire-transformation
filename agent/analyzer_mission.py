@@ -561,24 +561,74 @@ def _call_groq(model_name: str, max_tokens: int, system_text: str,
         f"{system_text}\n\n"
         f"SCHÉMA JSON DE SORTIE ATTENDU (respecter EXACTEMENT) :\n"
         f"```json\n{schema_json}\n```\n"
-        f"Réponds UNIQUEMENT avec le JSON valide, sans texte autour."
+        f"RÈGLES IMPÉRATIVES POUR LA RÉPONSE :\n"
+        f"1. Réponds UNIQUEMENT avec le JSON valide, sans texte autour.\n"
+        f"2. INTERDIT de laisser un champ de texte vide (chaîne vide \"\"). "
+        f"Chaque champ 'analyse', 'texte', 'so_what', 'tendances_effectifs', "
+        f"'instances_rh', 'politiques_sociales', 'conformite', 'externalisation', "
+        f"'experience_employe' doit contenir au minimum 2-3 phrases substantielles.\n"
+        f"3. Utilise ta connaissance du secteur ET les sources fournies. "
+        f"Si une source ne couvre pas exactement le sujet, utilise tes connaissances "
+        f"du secteur pour compléter avec des faits vérifiables.\n"
+        f"4. Les listes (competences_emergentes, nouveaux_roles, etc.) doivent contenir "
+        f"au minimum 3 éléments concrets et nommés."
     )
 
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": system_with_schema},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={"type": "json_object"},
-        max_tokens=max_tokens,
-        temperature=0.3,
-    )
+    def _is_response_empty(data: dict) -> bool:
+        """Vérifie si les champs clés sont vides — détecte une réponse minimale."""
+        text_fields = ["texte", "analyse", "so_what", "tendances_effectifs",
+                       "instances_rh", "experience_employe"]
+        empty_count = 0
+        total_count = 0
+        for v in data.values():
+            if isinstance(v, dict):
+                for fk, fv in v.items():
+                    if fk in text_fields:
+                        total_count += 1
+                        if not fv or (isinstance(fv, str) and len(fv.strip()) < 20):
+                            empty_count += 1
+        return total_count > 0 and (empty_count / total_count) > 0.5
 
-    raw = response.choices[0].message.content.strip()
-    result = json.loads(raw)
-    logger.info(f"{tool_name} (Groq/{model_name}) — {response.usage.prompt_tokens} in / {response.usage.completion_tokens} out")
-    return result
+    last_error = None
+    for attempt in range(2):  # 2 tentatives max
+        try:
+            temperature = 0.3 if attempt == 0 else 0.5  # +créativité si retry
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_with_schema},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={"type": "json_object"},
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            raw = response.choices[0].message.content.strip()
+            result = json.loads(raw)
+            in_tok  = response.usage.prompt_tokens
+            out_tok = response.usage.completion_tokens
+            logger.info(
+                f"{tool_name} (Groq/{model_name}) tentative {attempt+1} — "
+                f"{in_tok} in / {out_tok} out"
+            )
+            if _is_response_empty(result):
+                logger.warning(
+                    f"Réponse Groq principalement vide (tentative {attempt+1}), "
+                    f"{'retry…' if attempt == 0 else 'on garde quand même.'}"
+                )
+                if attempt == 0:
+                    continue  # relance avec temperature plus haute
+            return result
+        except Exception as e:
+            last_error = e
+            logger.warning(f"Groq tentative {attempt+1} échouée : {e}")
+            if attempt == 0:
+                continue
+
+    raise RuntimeError(
+        f"Groq n'a pas produit de résultat utilisable après 2 tentatives. "
+        f"Dernière erreur : {last_error}"
+    )
 
 
 def _call_llm(provider: str, model: str, max_tokens: int, system_text: str,
