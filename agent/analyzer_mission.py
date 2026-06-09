@@ -541,9 +541,116 @@ def _call_gemini(model_name: str, max_tokens: int, system_text: str,
     return result
 
 
+_GROQ_OUTPUT_FORMAT = """\
+Tu dois retourner un objet JSON valide avec exactement ces clés.
+Chaque champ entre [crochets] doit être remplacé par du contenu réel et substantiel (jamais vide).
+
+{
+  "contexte_mission": {
+    "texte": "[3-4 phrases sur le contexte sectoriel, les dynamiques de marché, les chiffres clés du secteur avec sources]",
+    "angle_rh": "[2-3 phrases sur les enjeux RH spécifiques de l'angle stratégique de la mission]"
+  },
+  "business_model_rh": {
+    "analyse": "[3-4 phrases analysant le business model sous l'angle RH : impacts sur les compétences, les métiers, la pyramide des âges — citer au moins 1 chiffre et 1 entreprise réelle]",
+    "competences_emergentes": ["[compétence émergente 1]", "[compétence émergente 2]", "[compétence émergente 3]"],
+    "competences_obsoletes": ["[compétence obsolète 1]", "[compétence obsolète 2]"],
+    "so_what": "[2-3 phrases sur les implications directes pour l'entreprise cible]"
+  },
+  "organisation_dimensionnement": {
+    "analyse": "[3-4 phrases sur l'organisation et le dimensionnement RH dans le secteur — effectifs, structures, modèles]",
+    "tendances_effectifs": "[2-3 phrases sur les tendances d'évolution des effectifs dans le secteur avec chiffres]",
+    "nouveaux_roles": ["[nouveau rôle 1]", "[nouveau rôle 2]", "[nouveau rôle 3]"],
+    "externalisation": "[2 phrases sur les pratiques d'externalisation observées dans le secteur]",
+    "so_what": "[2-3 phrases sur les implications directes pour l'entreprise cible]"
+  },
+  "gouvernance_rh": {
+    "analyse": "[3-4 phrases sur la gouvernance RH dans le secteur : instances, politiques, conformité]",
+    "instances_rh": "[2 phrases sur les instances RH (CODIR, comités sociaux) observées dans le secteur]",
+    "politiques_sociales": "[2 phrases sur les politiques sociales et avantages observés dans le secteur]",
+    "conformite": "[2 phrases sur la conformité réglementaire RH dans la géographie ciblée]",
+    "so_what": "[2-3 phrases sur les implications directes pour l'entreprise cible]"
+  },
+  "innovation_manageriale": {
+    "analyse": "[3-4 phrases sur l'innovation managériale et les pratiques RH innovantes dans le secteur]",
+    "pratiques_differenciantes": ["[pratique 1]", "[pratique 2]", "[pratique 3]"],
+    "outils_rh": ["[outil RH 1]", "[outil RH 2]", "[outil RH 3]"],
+    "experience_employe": "[2-3 phrases sur l'expérience employé dans le secteur avec exemples concrets]",
+    "so_what": "[2-3 phrases sur les implications directes pour l'entreprise cible]"
+  },
+  "signaux_faibles": [
+    {
+      "signal": "[signal faible 1 — tendance émergente non encore mainstream]",
+      "implication_rh": "[implication RH de ce signal]",
+      "horizon": "[court / moyen / long terme]",
+      "pertinence_mission": "[en quoi ce signal est pertinent pour la mission]"
+    },
+    {
+      "signal": "[signal faible 2]",
+      "implication_rh": "[implication RH]",
+      "horizon": "[horizon]",
+      "pertinence_mission": "[pertinence]"
+    }
+  ],
+  "recommandations_mission": [
+    {
+      "action": "[recommandation 1 — action concrète et spécifique]",
+      "justification": "[pourquoi cette action, appuyé sur les faits du benchmark]",
+      "priorite": "Haute",
+      "kpi": "[indicateur de mesure de succès]",
+      "horizon": "[ex : 6 mois, 12 mois, 18 mois]"
+    },
+    {
+      "action": "[recommandation 2]",
+      "justification": "[justification]",
+      "priorite": "Moyenne",
+      "kpi": "[kpi]",
+      "horizon": "[horizon]"
+    },
+    {
+      "action": "[recommandation 3]",
+      "justification": "[justification]",
+      "priorite": "Moyenne",
+      "kpi": "[kpi]",
+      "horizon": "[horizon]"
+    }
+  ],
+  "slides_optionnelles": []
+}
+"""
+
+
+def _check_empty(data: dict) -> tuple[bool, int, int]:
+    """Retourne (est_vide, nb_champs_vides, nb_champs_total) pour les champs texte imbriqués."""
+    TEXT_KEYS = {"texte", "analyse", "so_what", "tendances_effectifs",
+                 "instances_rh", "politiques_sociales", "conformite",
+                 "externalisation", "experience_employe", "signal",
+                 "implication_rh", "action", "justification"}
+    empty, total = 0, 0
+    def _walk(obj):
+        nonlocal empty, total
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if k in TEXT_KEYS and isinstance(v, str):
+                    total += 1
+                    if not v.strip() or v.strip().startswith("[") or len(v.strip()) < 30:
+                        empty += 1
+                else:
+                    _walk(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                _walk(item)
+    _walk(data)
+    is_empty = total > 0 and (empty / total) > 0.4
+    return is_empty, empty, total
+
+
 def _call_groq(model_name: str, max_tokens: int, system_text: str,
                tool: dict, tool_name: str, user_prompt: str) -> dict:
-    """Appel Groq avec JSON mode."""
+    """
+    Appel Groq avec JSON mode.
+    Utilise une description humaine des champs (pas le schéma JSON brut)
+    pour éviter que le modèle 'remplisse le template' avec des chaînes vides.
+    """
     try:
         from groq import Groq
     except ImportError:
@@ -554,54 +661,30 @@ def _call_groq(model_name: str, max_tokens: int, system_text: str,
         raise ValueError("GROQ_API_KEY manquant. Ajoutez votre clé dans le fichier .env.")
 
     client = Groq(api_key=api_key)
-    schema = tool.get("input_schema", {})
-    schema_json = json.dumps(schema, ensure_ascii=False, indent=2)
 
-    system_with_schema = (
+    # On n'intègre PAS le schéma JSON brut (ça confond le modèle).
+    # On donne une description humaine avec des exemples de contenu attendu.
+    system_final = (
         f"{system_text}\n\n"
-        f"SCHÉMA JSON DE SORTIE ATTENDU (respecter EXACTEMENT) :\n"
-        f"```json\n{schema_json}\n```\n"
-        f"RÈGLES IMPÉRATIVES POUR LA RÉPONSE :\n"
-        f"1. Réponds UNIQUEMENT avec le JSON valide, sans texte autour.\n"
-        f"2. INTERDIT de laisser un champ de texte vide (chaîne vide \"\"). "
-        f"Chaque champ 'analyse', 'texte', 'so_what', 'tendances_effectifs', "
-        f"'instances_rh', 'politiques_sociales', 'conformite', 'externalisation', "
-        f"'experience_employe' doit contenir au minimum 2-3 phrases substantielles.\n"
-        f"3. Utilise ta connaissance du secteur ET les sources fournies. "
-        f"Si une source ne couvre pas exactement le sujet, utilise tes connaissances "
-        f"du secteur pour compléter avec des faits vérifiables.\n"
-        f"4. Les listes (competences_emergentes, nouveaux_roles, etc.) doivent contenir "
-        f"au minimum 3 éléments concrets et nommés."
+        f"FORMAT DE RÉPONSE :\n"
+        f"{_GROQ_OUTPUT_FORMAT}\n"
+        f"RAPPEL : Remplace TOUS les textes entre [crochets] par du vrai contenu. "
+        f"Ne retourne pas de crochets dans ta réponse. "
+        f"Chaque champ texte = minimum 2 phrases avec des faits concrets."
     )
 
-    def _is_response_empty(data: dict) -> bool:
-        """Vérifie si les champs clés sont vides — détecte une réponse minimale."""
-        text_fields = ["texte", "analyse", "so_what", "tendances_effectifs",
-                       "instances_rh", "experience_employe"]
-        empty_count = 0
-        total_count = 0
-        for v in data.values():
-            if isinstance(v, dict):
-                for fk, fv in v.items():
-                    if fk in text_fields:
-                        total_count += 1
-                        if not fv or (isinstance(fv, str) and len(fv.strip()) < 20):
-                            empty_count += 1
-        return total_count > 0 and (empty_count / total_count) > 0.5
-
     last_error = None
-    for attempt in range(2):  # 2 tentatives max
+    for attempt in range(2):
         try:
-            temperature = 0.3 if attempt == 0 else 0.5  # +créativité si retry
             response = client.chat.completions.create(
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": system_with_schema},
-                    {"role": "user", "content": user_prompt},
+                    {"role": "system", "content": system_final},
+                    {"role": "user",   "content": user_prompt},
                 ],
                 response_format={"type": "json_object"},
                 max_tokens=max_tokens,
-                temperature=temperature,
+                temperature=0.4 + attempt * 0.1,
             )
             raw = response.choices[0].message.content.strip()
             result = json.loads(raw)
@@ -611,13 +694,15 @@ def _call_groq(model_name: str, max_tokens: int, system_text: str,
                 f"{tool_name} (Groq/{model_name}) tentative {attempt+1} — "
                 f"{in_tok} in / {out_tok} out"
             )
-            if _is_response_empty(result):
+            is_empty, n_empty, n_total = _check_empty(result)
+            logger.info(f"  → champs vides : {n_empty}/{n_total}")
+            if is_empty:
                 logger.warning(
-                    f"Réponse Groq principalement vide (tentative {attempt+1}), "
+                    f"Réponse Groq majoritairement vide ({n_empty}/{n_total}) — "
                     f"{'retry…' if attempt == 0 else 'on garde quand même.'}"
                 )
                 if attempt == 0:
-                    continue  # relance avec temperature plus haute
+                    continue
             return result
         except Exception as e:
             last_error = e
