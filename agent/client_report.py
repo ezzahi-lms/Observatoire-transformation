@@ -403,11 +403,17 @@ def generate_infographie_html(
     config_client: Optional[Dict] = None,
 ) -> str:
     """
-    Génère l'infographie HTML 1 page — style McKinsey Charts.
+    Génère l'infographie HTML 1 page.
 
-    Design : fond blanc pur · navy #051C2C · bleu #1B4ECD · typo serrée ·
-    grand chiffre hero · barre CSS · règles fines 1 px · labels UPPERCASE ·
-    zéro arrondi · zéro ombre · largeur email 600 px.
+    Structure McKinsey (données hero, règles fines, UPPERCASE, barre CSS,
+    2 colonnes signaux, CTA texte, zéro arrondi) appliquée à la charte LMS ORH :
+      · Bordeaux  #8B1A1A  — accent principal, chiffre hero, barre, labels
+      · Bordeaux pâle #F5EDED — fond callout
+      · Bordeaux clair #C8AAAA — accent secondaire signal 2
+      · Gris foncé #2D2D2D — texte titres
+      · Gris #595959 — texte secondaire
+      · Gris règle #E5E5E5
+      · Fond signaux #F5F5F5
     """
     import re as _re
 
@@ -422,17 +428,20 @@ def generate_infographie_html(
     email_cons = (config_client or {}).get("email_consultant", "contact@lms-orh.com")
     nom_cons   = (config_client or {}).get("nom_consultant", "LMS ORH")
 
-    # ── Palette McKinsey ──────────────────────────────────────────────────────
-    NAVY   = "#051C2C"   # texte principal, labels, footer
-    BLUE   = "#1B4ECD"   # accent, barre, lien, badge horizon
-    BLUE_L = "#EBF0FB"   # fond callout "ce que ça change"
-    RULE   = "#DCDCDC"   # règles horizontales
-    GRAY2  = "#5E6D7A"   # texte secondaire
-    GRAY3  = "#8C9BAA"   # texte tertiaire / source
-    BG     = "#FFFFFF"   # fond total
-    BGS    = "#F7F8FA"   # fond section signaux
+    # ── Palette LMS ORH ───────────────────────────────────────────────────────
+    BORD   = "#8B1A1A"   # bordeaux principal LMS
+    BORD_L = "#F5EDED"   # bordeaux très pâle — fond callout
+    BORD_M = "#C8AAAA"   # bordeaux clair — accent secondaire (signal 2)
+    BORD_T = "#F0E4E4"   # bordeaux track barre (fond de la jauge)
+    DARK   = "#2D2D2D"   # gris foncé LMS — titres, textes forts
+    GRAY2  = "#595959"   # gris secondaire LMS
+    GRAY3  = "#9A9A9A"   # gris tertiaire — source, metadata
+    RULE   = "#E5E5E5"   # gris séparateur LMS
+    BG     = "#FFFFFF"   # fond blanc
+    BGS    = "#F5F5F5"   # fond section signaux (gris clair LMS)
+    BGPAGE = "#EDEEF0"   # fond page (légèrement gris)
 
-    # ── Logo LMS (base64 ou wordmark texte) ──────────────────────────────────
+    # ── Logo LMS (base64 ou wordmark texte LMS) ───────────────────────────────
     assets_dir = Path(__file__).parent.parent / "assets"
     logo_b64   = ""
     for _n in ("logo_lms.png", "Logo LMS.png", "logo_lms_dark.png", "logo_lms.jpg"):
@@ -448,12 +457,14 @@ def generate_infographie_html(
             f'style="display:block;"/>'
         )
     else:
+        # Wordmark LMS ORH en bordeaux si pas de logo
         logo_html = (
             f'<span style="font-family:\'Helvetica Neue\',Arial,sans-serif;'
-            f'font-size:15px;font-weight:700;letter-spacing:.5px;color:{NAVY};">LMS ORH</span>'
+            f'font-size:16px;font-weight:700;letter-spacing:.5px;color:{BORD};">'
+            f'LMS ORH</span>'
         )
 
-    # ── Barre CSS pour le chiffre clé (si %) ─────────────────────────────────
+    # ── Barre CSS (si le chiffre clé contient un %) ───────────────────────────
     chiffre_raw = ip.get("chiffre_cle", "")
     pct_m = _re.search(r"(\d+)\s*%", chiffre_raw)
     bar_html = ""
@@ -462,16 +473,16 @@ def generate_infographie_html(
         bar_html = f"""
         <div style="margin:20px 0 4px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="flex:1;height:6px;background:#E2E8F2;">
-              <div style="width:{pct}%;height:6px;background:{BLUE};"></div>
+            <div style="flex:1;height:6px;background:{BORD_T};">
+              <div style="width:{pct}%;height:6px;background:{BORD};"></div>
             </div>
-            <span style="font-size:11px;font-weight:700;color:{BLUE};
+            <span style="font-size:11px;font-weight:700;color:{BORD};
                          min-width:32px;text-align:right;">{pct}%</span>
           </div>
         </div>"""
 
-    # ── Horizon badges (texte épuré) ──────────────────────────────────────────
-    def _horizon(text: str, color: str = BLUE) -> str:
+    # ── Horizon label (texte UPPERCASE épuré) ─────────────────────────────────
+    def _horizon(text: str, color: str = BORD) -> str:
         return (
             f'<span style="font-size:9px;font-weight:700;letter-spacing:1.2px;'
             f'text-transform:uppercase;color:{color};">{text}</span>'
@@ -491,13 +502,13 @@ def generate_infographie_html(
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Veille Innovation RH — {secteur} — {mois}</title>
 </head>
-<body style="margin:0;padding:24px 16px;background:#EDEEF0;
+<body style="margin:0;padding:24px 16px;background:{BGPAGE};
              font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
 
 <div style="max-width:600px;margin:0 auto;background:{BG};">
 
-  <!-- ══ BANDE TOP ══ -->
-  <div style="height:4px;background:{NAVY};"></div>
+  <!-- ══ BANDE TOP BORDEAUX LMS ══ -->
+  <div style="height:4px;background:{BORD};"></div>
 
   <!-- ══ EN-TÊTE ══ -->
   <div style="padding:20px 32px 16px;border-bottom:1px solid {RULE};
@@ -517,25 +528,25 @@ def generate_infographie_html(
   <!-- ══ INNOVATION PHARE ══ -->
   <div style="padding:28px 32px 24px;">
 
-    <!-- Label catégorie -->
+    <!-- Label catégorie bordeaux -->
     <div style="font-size:9px;font-weight:700;letter-spacing:1.6px;
-                text-transform:uppercase;color:{BLUE};margin-bottom:18px;">
+                text-transform:uppercase;color:{BORD};margin-bottom:18px;">
       Innovation du mois
     </div>
 
-    <!-- Chiffre hero -->
-    <div style="font-size:52px;font-weight:700;color:{NAVY};line-height:1;
+    <!-- Chiffre hero bordeaux -->
+    <div style="font-size:52px;font-weight:700;color:{BORD};line-height:1;
                 letter-spacing:-1px;margin-bottom:6px;">
       {chiffre_raw}
     </div>
 
-    <!-- Titre -->
-    <div style="font-size:16px;font-weight:600;color:{NAVY};line-height:1.35;
+    <!-- Titre gris foncé -->
+    <div style="font-size:16px;font-weight:600;color:{DARK};line-height:1.35;
                 margin-bottom:4px;">
       {ip.get("titre_client", "")}
     </div>
 
-    <!-- Barre CSS -->
+    <!-- Barre CSS bordeaux -->
     {bar_html}
 
     <!-- Règle fine -->
@@ -546,14 +557,14 @@ def generate_infographie_html(
       {ip.get("description_client", "")}
     </div>
 
-    <!-- Ce que ça change — callout McKinsey style (trait gauche + fond très léger) -->
-    <div style="border-left:3px solid {BLUE};background:{BLUE_L};
+    <!-- Callout "Ce que ça change" — bordure bordeaux + fond bordeaux pâle -->
+    <div style="border-left:3px solid {BORD};background:{BORD_L};
                 padding:12px 16px;">
       <div style="font-size:9px;font-weight:700;letter-spacing:1.2px;
-                  text-transform:uppercase;color:{BLUE};margin-bottom:6px;">
+                  text-transform:uppercase;color:{BORD};margin-bottom:6px;">
         Ce que ça change pour vous
       </div>
-      <div style="font-size:13px;color:{NAVY};line-height:1.6;">
+      <div style="font-size:13px;color:{DARK};line-height:1.6;">
         {ip.get("so_what_client", "")}
       </div>
     </div>
@@ -575,11 +586,11 @@ def generate_infographie_html(
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr valign="top">
 
-        <!-- Signal 1 -->
+        <!-- Signal 1 — accent bordeaux -->
         <td width="48%" style="padding-right:16px;">
-          <div style="height:2px;background:{NAVY};width:24px;margin-bottom:12px;"></div>
-          {_horizon(sf1.get("horizon_badge", "Dans 6–12 mois"))}
-          <div style="font-size:13px;font-weight:600;color:{NAVY};
+          <div style="height:2px;background:{BORD};width:24px;margin-bottom:12px;"></div>
+          {_horizon(sf1.get("horizon_badge", "Dans 6–12 mois"), BORD)}
+          <div style="font-size:13px;font-weight:600;color:{DARK};
                       line-height:1.35;margin:7px 0 6px;">
             {sf1.get("titre_client", "")}
           </div>
@@ -594,11 +605,11 @@ def generate_infographie_html(
                       margin:0 auto;min-height:80px;"></div>
         </td>
 
-        <!-- Signal 2 -->
+        <!-- Signal 2 — accent bordeaux clair -->
         <td width="48%" style="padding-left:16px;">
-          <div style="height:2px;background:{BLUE};width:24px;margin-bottom:12px;"></div>
+          <div style="height:2px;background:{BORD_M};width:24px;margin-bottom:12px;"></div>
           {_horizon(sf2.get("horizon_badge", "Dans 1–2 ans"), GRAY2)}
-          <div style="font-size:13px;font-weight:600;color:{NAVY};
+          <div style="font-size:13px;font-weight:600;color:{DARK};
                       line-height:1.35;margin:7px 0 6px;">
             {sf2.get("titre_client", "")}
           </div>
@@ -618,14 +629,14 @@ def generate_infographie_html(
   <!-- ══ FOOTER ══ -->
   <div style="padding:20px 32px 24px;">
 
-    <!-- CTA texte — style McKinsey : pas de bouton coloré, juste un lien souligné -->
-    <div style="font-size:13px;color:{NAVY};font-weight:600;margin-bottom:10px;">
+    <!-- CTA texte — question bordeaux, lien bordeaux souligné (sans bouton) -->
+    <div style="font-size:13px;color:{DARK};font-weight:600;margin-bottom:10px;">
       {cta_q}
     </div>
     <div style="font-size:12px;color:{GRAY2};margin-bottom:16px;">
       Répondez directement à cet email ou écrivez à
       <a href="mailto:{email_cons}"
-         style="color:{BLUE};text-decoration:underline;">{email_cons}</a>
+         style="color:{BORD};text-decoration:underline;">{email_cons}</a>
     </div>
 
     <!-- Règle fine footer -->
@@ -640,8 +651,8 @@ def generate_infographie_html(
 
   </div>
 
-  <!-- ══ BANDE BAS ══ -->
-  <div style="height:3px;background:{RULE};"></div>
+  <!-- ══ BANDE BAS BORDEAUX LMS ══ -->
+  <div style="height:3px;background:{BORD};"></div>
 
 </div>
 
