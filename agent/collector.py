@@ -89,7 +89,7 @@ def collect_web(sector_config: Dict, max_per_query: int = 8) -> List[Dict[str, A
 
 
 def collect(sector_config: Dict, settings: Dict) -> List[Dict[str, Any]]:
-    """Point d'entrée principal : collecte RSS + web, déduplique, tronque."""
+    """Point d'entrée principal : collecte RSS + web + PDFs magazines, déduplique, tronque."""
     days_back = settings.get("collection", {}).get("days_back", 35)
     max_search = settings.get("collection", {}).get("max_search_results", 8)
     max_total = settings.get("collection", {}).get("max_articles_total", 60)
@@ -100,9 +100,19 @@ def collect(sector_config: Dict, settings: Dict) -> List[Dict[str, Any]]:
     logger.info("Collecte web...")
     web_articles = collect_web(sector_config, max_per_query=max_search)
 
-    all_articles = rss_articles + web_articles
+    # Collecte PDFs magazines si dossier configuré
+    pdf_articles: List[Dict[str, Any]] = []
+    if settings.get("collection", {}).get("magazines_dir") or __import__("os").environ.get("MAGAZINES_DIR"):
+        logger.info("Collecte PDFs magazines...")
+        try:
+            from agent.pdf_collector import collect_pdfs
+            pdf_articles = collect_pdfs(sector_config, settings)
+        except Exception as e:
+            logger.warning(f"Collecte PDFs ignorée : {e}")
 
-    # Déduplicate par URL
+    all_articles = rss_articles + web_articles + pdf_articles
+
+    # Déduplicate par URL/chemin
     seen = set()
     unique = []
     for a in all_articles:
@@ -116,5 +126,8 @@ def collect(sector_config: Dict, settings: Dict) -> List[Dict[str, Any]]:
         unique = unique[:max_total]
         logger.info(f"Articles tronqués à {max_total}")
 
-    logger.info(f"Total articles collectés : {len(unique)} (RSS: {len(rss_articles)}, Web: {len(web_articles)})")
+    logger.info(
+        f"Total articles collectés : {len(unique)} "
+        f"(RSS: {len(rss_articles)}, Web: {len(web_articles)}, PDF: {len(pdf_articles)})"
+    )
     return unique

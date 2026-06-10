@@ -423,7 +423,11 @@ PAS les pipelines R&D, résultats cliniques, actualités boursières pures.
 
 Chaque champ texte : 1-3 phrases maximum. Factuel, direct, exploitable par des décideurs.
 
-Langue : français, registre professionnel consultant senior."""
+## Sources multilingues
+
+Les sources peuvent être en français, anglais, italien, arabe ou espagnol. \
+Analyser le contenu dans sa langue d'origine et produire TOUJOURS l'analyse en français, \
+registre professionnel consultant senior."""
 
 
 def _compute_freshness(articles: List[Dict]) -> Dict:

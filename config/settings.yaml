@@ -6,6 +6,14 @@ collection:
   days_back: 35
   max_search_results: 15
   max_articles_total: 60
+  # ── Source PDFs Magazines ─────────────────────────────────────────────────
+  # PDFs de presse téléchargés depuis WhatsApp (groupe Biblio Observ Transfo).
+  # Laisser vide "" pour désactiver. Peut aussi être défini via $MAGAZINES_DIR.
+  magazines_dir: "C:/Users/LMS/OneDrive - LMS ORH/Bureau/LMS-Orga/Observatoire Transformation/Magazines"
+  pdf_days_back: 40         # Fenêtre de sélection (jours)
+  pdf_max_chars: 3000       # Caractères extraits par PDF
+  pdf_min_score: 1          # Score pertinence minimum (nb mots-clés matchés)
+  pdf_max_docs: 15          # Nb maximum de PDFs injectés par run
 analysis:
   provider: gemini                  # anthropic | gemini
   model: claude-sonnet-4-6          # Modèle Anthropic (si provider=anthropic)
