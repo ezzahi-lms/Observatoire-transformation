@@ -110,8 +110,12 @@ Remplace TOUS les textes entre [crochets] par du vrai contenu.
     "entreprises_nommees": ["[entreprise réelle 1]", "[entreprise réelle 2]"],
     "source": "[source ou médias de l'information]",
     "horizon": "[immédiat / 6-12 mois / 12-24 mois]",
+    "indice_maturite": "[émergent ou en_deploiement ou établi]",
+    "score_urgence": "[cette_semaine ou ce_mois ou prochain_trimestre]",
+    "score_urgence_justification": "[1 phrase qui justifie le score d'urgence]",
     "description_client": "[2 phrases maximum en langage dirigeant sans jargon RH]",
     "so_what_client": "[1 phrase active : ce que ça change concrètement pour le client]",
+    "question_amorce": "[question ouverte SPÉCIFIQUE à cette innovation — jamais générique — ex: Comment gérez-vous aujourd'hui le volume de candidatures dans votre secteur ?]",
     "angles_commerciaux": [
       "[formulation naturelle 1 pour aborder le sujet — ex: Saviez-vous que...]",
       "[formulation naturelle 2 — question ouverte orientée client]",
@@ -123,17 +127,46 @@ Remplace TOUS les textes entre [crochets] par du vrai contenu.
     "titre_client": "[titre client signal 1 — 5 mots max]",
     "observation_interne": "[2 phrases sur le signal avec source [N] si disponible]",
     "description_client": "[1 phrase en langage dirigeant]",
-    "horizon_badge": "Dans 6-12 mois"
+    "horizon_badge": "Dans 6-12 mois",
+    "indice_maturite": "[émergent ou en_deploiement ou établi]"
   },
   "signal_faible_2": {
     "titre_interne": "[titre signal 2 — 6 mots max]",
     "titre_client": "[titre client signal 2 — 5 mots max]",
     "observation_interne": "[2 phrases sur le signal avec source [N] si disponible]",
     "description_client": "[1 phrase en langage dirigeant]",
-    "horizon_badge": "Dans 1-2 ans"
+    "horizon_badge": "Dans 1-2 ans",
+    "indice_maturite": "[émergent ou en_deploiement ou établi]"
+  },
+  "feedback": {
+    "rdv_genere": null,
+    "date_envoi": null,
+    "consultant": null,
+    "client": null
   }
 }
 """
+
+# ── Indice de maturité — dots et labels ──────────────────────────────────────
+_MATURITE_MAP = {
+    "émergent":        ("Émergent",        "●",   "#C8AAAA"),
+    "emergent":        ("Émergent",        "●",   "#C8AAAA"),
+    "en_deploiement":  ("En déploiement",  "●●",  "#8B1A1A"),
+    "en déploiement":  ("En déploiement",  "●●",  "#8B1A1A"),
+    "établi":          ("Établi",          "●●●", "#8B1A1A"),
+    "etabli":          ("Établi",          "●●●", "#8B1A1A"),
+}
+
+def _maturite_html(key: str, color_label: str = "#595959", size: str = "10px") -> str:
+    """Retourne le span HTML 'Maturité : Établi ●●●'."""
+    norm = (key or "").lower().strip()
+    label, dots, dot_color = _MATURITE_MAP.get(norm, ("—", "", "#9A9A9A"))
+    return (
+        f'<span style="font-size:{size};color:{color_label};">Maturité : '
+        f'<strong style="color:#8B1A1A;">{label}</strong> '
+        f'<span style="color:{dot_color};letter-spacing:1px;">{dots}</span>'
+        f'</span>'
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -488,12 +521,19 @@ def generate_infographie_html(
             f'text-transform:uppercase;color:{color};">{text}</span>'
         )
 
-    # ── CTA ───────────────────────────────────────────────────────────────────
-    cta_q = (
-        f"Cette évolution concerne-t-elle {nom_client}&nbsp;?"
-        if nom_client else
-        "Ces évolutions concernent-elles votre organisation&nbsp;?"
-    )
+    # ── Question d'amorce — spécifique à l'innovation (Bloc 5) ──────────────
+    question_amorce = ip.get("question_amorce", "")
+    if not question_amorce:
+        question_amorce = (
+            f"Cette évolution concerne-t-elle {nom_client}&nbsp;?"
+            if nom_client else
+            "Ces évolutions concernent-elles votre organisation&nbsp;?"
+        )
+
+    # ── Maturité innovation phare ─────────────────────────────────────────────
+    maturite_ip_html  = _maturite_html(ip.get("indice_maturite", ""),  GRAY2, "10px")
+    maturite_sf1_html = _maturite_html(sf1.get("indice_maturite", ""), GRAY2, "9px")
+    maturite_sf2_html = _maturite_html(sf2.get("indice_maturite", ""), GRAY2, "9px")
 
     html = f"""<!DOCTYPE html>
 <html lang="fr">
@@ -528,10 +568,14 @@ def generate_infographie_html(
   <!-- ══ INNOVATION PHARE ══ -->
   <div style="padding:28px 32px 24px;">
 
-    <!-- Label catégorie bordeaux -->
-    <div style="font-size:9px;font-weight:700;letter-spacing:1.6px;
-                text-transform:uppercase;color:{BORD};margin-bottom:18px;">
-      Innovation du mois
+    <!-- Ligne catégorie + indice maturité -->
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                margin-bottom:18px;">
+      <div style="font-size:9px;font-weight:700;letter-spacing:1.6px;
+                  text-transform:uppercase;color:{BORD};">
+        ★ Innovation du mois
+      </div>
+      {maturite_ip_html}
     </div>
 
     <!-- Chiffre hero bordeaux -->
@@ -590,6 +634,7 @@ def generate_infographie_html(
         <td width="48%" style="padding-right:16px;">
           <div style="height:2px;background:{BORD};width:24px;margin-bottom:12px;"></div>
           {_horizon(sf1.get("horizon_badge", "Dans 6–12 mois"), BORD)}
+          <div style="margin-top:5px;">{maturite_sf1_html}</div>
           <div style="font-size:13px;font-weight:600;color:{DARK};
                       line-height:1.35;margin:7px 0 6px;">
             {sf1.get("titre_client", "")}
@@ -609,6 +654,7 @@ def generate_infographie_html(
         <td width="48%" style="padding-left:16px;">
           <div style="height:2px;background:{BORD_M};width:24px;margin-bottom:12px;"></div>
           {_horizon(sf2.get("horizon_badge", "Dans 1–2 ans"), GRAY2)}
+          <div style="margin-top:5px;">{maturite_sf2_html}</div>
           <div style="font-size:13px;font-weight:600;color:{DARK};
                       line-height:1.35;margin:7px 0 6px;">
             {sf2.get("titre_client", "")}
@@ -623,32 +669,35 @@ def generate_infographie_html(
 
   </div>
 
-  <!-- ══ RÈGLE SÉPARATRICE ══ -->
-  <div style="height:1px;background:{RULE};"></div>
+  <!-- ══ BLOC 5 — QUESTION D'AMORCE DYNAMIQUE ══ -->
+  <div style="background:{DARK};padding:24px 32px;text-align:center;">
 
-  <!-- ══ FOOTER ══ -->
-  <div style="padding:20px 32px 24px;">
-
-    <!-- CTA texte — question bordeaux, lien bordeaux souligné (sans bouton) -->
-    <div style="font-size:13px;color:{DARK};font-weight:600;margin-bottom:10px;">
-      {cta_q}
-    </div>
-    <div style="font-size:12px;color:{GRAY2};margin-bottom:16px;">
-      Répondez directement à cet email ou écrivez à
-      <a href="mailto:{email_cons}"
-         style="color:{BORD};text-decoration:underline;">{email_cons}</a>
+    <!-- Question spécifique générée par Claude -->
+    <div style="color:#FFFFFF;font-size:14px;font-weight:600;
+                font-style:italic;line-height:1.6;margin-bottom:18px;">
+      &laquo;&nbsp;{question_amorce}&nbsp;&raquo;
     </div>
 
-    <!-- Règle fine footer -->
-    <div style="height:1px;background:{RULE};margin-bottom:14px;"></div>
+    <!-- Bouton bordeaux LMS -->
+    <a href="mailto:{email_cons}"
+       style="background:{BORD};color:white;padding:11px 28px;
+              text-decoration:none;font-size:13px;font-weight:600;
+              display:inline-block;">
+      En discuter avec LMS
+    </a>
 
-    <!-- Mention source -->
+    <div style="color:#9A9A9A;font-size:10px;margin-top:16px;line-height:1.6;">
+      {nom_cons} &nbsp;·&nbsp; LMS ORH &nbsp;·&nbsp; {email_cons}
+    </div>
+
+  </div>
+
+  <!-- ══ MENTION SOURCE ══ -->
+  <div style="padding:12px 32px 14px;border-top:1px solid {RULE};">
     <div style="font-size:10px;color:{GRAY3};line-height:1.6;">
       Source : LMS ORH — Veille Innovation RH &nbsp;·&nbsp;
-      {nom_cons} &nbsp;·&nbsp; {mois} &nbsp;·&nbsp;
-      Usage exclusif client — ne pas diffuser
+      {mois} &nbsp;·&nbsp; Usage exclusif client — ne pas diffuser
     </div>
-
   </div>
 
   <!-- ══ BANDE BAS BORDEAUX LMS ══ -->
@@ -693,6 +742,51 @@ def generate_rapport_interne(
         if nom_client else ""
     )
 
+    # ── Score d'urgence ───────────────────────────────────────────────────────
+    _urgence_cfg = {
+        "cette_semaine":       ("#C0392B", "🔴", "Cette semaine"),
+        "ce_mois":             ("#D68910", "🟡", "Ce mois"),
+        "prochain_trimestre":  ("#27AE60", "🟢", "Prochain trimestre"),
+    }
+    _urg_key = (ip.get("score_urgence") or "ce_mois").lower().strip()
+    _urg_color, _urg_icon, _urg_label = _urgence_cfg.get(
+        _urg_key, ("#595959", "⚪", ip.get("score_urgence", "—"))
+    )
+    urgence_html = (
+        f'<div style="display:inline-flex;align-items:center;gap:8px;'
+        f'background:#F9F9F9;border:1px solid #E0E0E0;'
+        f'padding:8px 14px;margin-top:12px;">'
+        f'<span style="font-size:13px;">{_urg_icon}</span>'
+        f'<span style="font-size:12px;font-weight:700;color:{_urg_color};">'
+        f'Contact recommandé : {_urg_label}</span>'
+        f'</div>'
+    )
+    if ip.get("score_urgence_justification"):
+        urgence_html += (
+            f'<p style="font-size:12px;color:{GRAY};font-style:italic;margin-top:6px;">'
+            f'{ip["score_urgence_justification"]}</p>'
+        )
+
+    # ── Question d'amorce ─────────────────────────────────────────────────────
+    question_amorce = ip.get("question_amorce", "")
+    question_amorce_html = ""
+    if question_amorce:
+        question_amorce_html = (
+            f'<div style="background:{BORDEAUX_LT};border-left:4px solid {BORDEAUX};'
+            f'padding:14px 16px;margin-top:14px;">'
+            f'<div style="font-size:10px;font-weight:700;letter-spacing:1px;'
+            f'text-transform:uppercase;color:{BORDEAUX};margin-bottom:6px;">'
+            f'Question d\'amorce (spécifique à cette innovation)</div>'
+            f'<p style="font-size:14px;font-style:italic;color:{DARK};margin:0;line-height:1.55;">'
+            f'&laquo; {question_amorce} &raquo;</p>'
+            f'</div>'
+        )
+
+    # ── Maturité consultant ───────────────────────────────────────────────────
+    mat_ip  = _maturite_html(ip.get("indice_maturite",  ""), GRAY, "11px")
+    mat_sf1 = _maturite_html(sf1.get("indice_maturite", ""), GRAY, "10px")
+    mat_sf2 = _maturite_html(sf2.get("indice_maturite", ""), GRAY, "10px")
+
     html = f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -734,11 +828,15 @@ def generate_rapport_interne(
 
   <!-- INNOVATION PHARE -->
   <h2>★ Innovation phare du mois</h2>
-  <span class="badge">Innovation du mois</span>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px;">
+    <span class="badge" style="margin-bottom:0;">Innovation du mois</span>
+    {mat_ip}
+  </div>
   <div class="chiffre">{ip.get("chiffre_cle", "")}</div>
-  <p style="font-size:17px;font-weight:bold;margin:6px 0 14px;">{ip.get("titre_interne", "")}</p>
+  <p style="font-size:17px;font-weight:bold;margin:6px 0 6px;">{ip.get("titre_interne", "")}</p>
+  {urgence_html}
 
-  <p style="font-size:13px;line-height:1.7;">{ip.get("observation_interne", "")}</p>
+  <p style="font-size:13px;line-height:1.7;margin-top:14px;">{ip.get("observation_interne", "")}</p>
 
   <p style="font-size:13px;margin-top:10px;">
     <strong>Entreprises pionnières :</strong> {ent_html}<br/>
@@ -751,6 +849,8 @@ def generate_rapport_interne(
     {ip.get("so_what_client", "")}
   </div>
 
+  {question_amorce_html}
+
   <!-- ANGLES COMMERCIAUX -->
   <div class="angles">
     <h3>🎯 Angles d'approche commerciale</h3>
@@ -762,12 +862,14 @@ def generate_rapport_interne(
 
   <div class="signal">
     <span class="badge-gray">Signal 1 · {sf1.get("horizon_badge", "Dans 6-12 mois")}</span>
+    &nbsp; {mat_sf1}
     <p style="font-size:15px;font-weight:bold;margin:8px 0 6px;">{sf1.get("titre_interne", "")}</p>
     <p style="font-size:13px;line-height:1.65;margin:0;">{sf1.get("observation_interne", "")}</p>
   </div>
 
   <div class="signal">
     <span class="badge-gray">Signal 2 · {sf2.get("horizon_badge", "Dans 1-2 ans")}</span>
+    &nbsp; {mat_sf2}
     <p style="font-size:15px;font-weight:bold;margin:8px 0 6px;">{sf2.get("titre_interne", "")}</p>
     <p style="font-size:13px;line-height:1.65;margin:0;">{sf2.get("observation_interne", "")}</p>
   </div>

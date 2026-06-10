@@ -227,6 +227,124 @@ def send_report_to_all_clients(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  NOTIFICATIONS MANAGER
+# ─────────────────────────────────────────────────────────────────────────────
+
+def send_manager_notification(
+    manager_email: str,
+    nb_rapports: int,
+    secteurs: List[str],
+    manager_nom: str = "Manager",
+) -> bool:
+    """
+    Notifie le manager qu'un ou plusieurs rapports sont en attente de validation.
+    Envoyé automatiquement après la génération mensuelle.
+    """
+    smtp_cfg = _get_smtp_config()
+    subject  = f"[LMS] {nb_rapports} rapport(s) Innovation RH en attente de validation"
+
+    secteurs_list = "".join(f"<li>{s}</li>" for s in secteurs)
+    html_body = f"""
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+  <div style="background:#8B1A1A;padding:20px 28px;">
+    <span style="color:white;font-size:18px;font-weight:bold;">LMS ORH — Veille Innovation RH</span>
+  </div>
+  <div style="padding:24px 28px;background:#FFFFFF;border:1px solid #E5E5E5;">
+    <p style="font-size:15px;">Bonjour {manager_nom},</p>
+    <p style="font-size:14px;line-height:1.6;">
+      <strong>{nb_rapports} rapport(s)</strong> de veille innovation RH ont été générés
+      ce mois-ci et sont en attente de votre validation avant envoi aux clients.
+    </p>
+    <p style="font-size:13px;color:#595959;">Secteurs concernés :</p>
+    <ul style="font-size:13px;color:#2D2D2D;line-height:1.8;">{secteurs_list}</ul>
+    <p style="font-size:14px;margin-top:20px;">
+      Connectez-vous à l'application pour relire, ajuster et valider chaque rapport
+      avant diffusion.
+    </p>
+    <hr style="border:none;border-top:1px solid #E5E5E5;margin:20px 0;"/>
+    <p style="font-size:11px;color:#9A9A9A;">
+      Ce message est généré automatiquement par l'Observatoire Transformation — LMS ORH.<br/>
+      Aucune action immédiate requise — les rapports restent en attente jusqu'à validation.
+    </p>
+  </div>
+</div>"""
+
+    text_body = (
+        f"Bonjour {manager_nom},\n\n"
+        f"{nb_rapports} rapport(s) de veille innovation sont en attente de validation.\n"
+        f"Secteurs : {', '.join(secteurs)}\n\n"
+        f"Connectez-vous à l'application pour valider.\n\nLMS ORH"
+    )
+
+    msg = _build_message(
+        smtp_cfg=smtp_cfg,
+        to_addresses=[manager_email],
+        subject=subject,
+        html_body=html_body,
+        text_body=text_body,
+    )
+    return _send(smtp_cfg, [manager_email], msg)
+
+
+def send_validation_reminder(
+    report_id: str,
+    manager_email: str,
+    day: int,
+    secteur: str = "",
+    manager_nom: str = "Manager",
+) -> bool:
+    """
+    Envoie une relance J+1 ou J+2 si le rapport n'est toujours pas validé.
+
+    Args:
+        report_id     : identifiant du rapport
+        manager_email : email du manager
+        day           : 1 ou 2 (J+1 ou J+2)
+        secteur       : nom du secteur pour le contexte
+        manager_nom   : prénom du manager
+    """
+    smtp_cfg = _get_smtp_config()
+    subject  = f"[LMS] Relance J+{day} — Rapport Innovation {secteur} en attente"
+
+    html_body = f"""
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+  <div style="background:#8B1A1A;padding:20px 28px;">
+    <span style="color:white;font-size:18px;font-weight:bold;">LMS ORH — Relance validation</span>
+  </div>
+  <div style="padding:24px 28px;background:#FFFFFF;border:1px solid #E5E5E5;">
+    <p style="font-size:15px;">Bonjour {manager_nom},</p>
+    <p style="font-size:14px;line-height:1.6;">
+      Rappel : le rapport <strong>{report_id}</strong>
+      {f'(secteur : {secteur})' if secteur else ''}
+      est en attente de validation depuis {day} jour(s).
+    </p>
+    <p style="font-size:14px;">
+      ⚠️ Aucun envoi ne sera effectué tant que vous n'aurez pas validé ce rapport.
+    </p>
+    <hr style="border:none;border-top:1px solid #E5E5E5;margin:20px 0;"/>
+    <p style="font-size:11px;color:#9A9A9A;">
+      Relance automatique J+{day} — LMS ORH Observatoire Transformation
+    </p>
+  </div>
+</div>"""
+
+    text_body = (
+        f"Bonjour {manager_nom},\n\n"
+        f"Relance J+{day} : le rapport {report_id} est toujours en attente de validation.\n"
+        f"Aucun envoi ne sera effectué sans votre validation.\n\nLMS ORH"
+    )
+
+    msg = _build_message(
+        smtp_cfg=smtp_cfg,
+        to_addresses=[manager_email],
+        subject=subject,
+        html_body=html_body,
+        text_body=text_body,
+    )
+    return _send(smtp_cfg, [manager_email], msg)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  UTILITAIRES
 # ─────────────────────────────────────────────────────────────────────────────
 

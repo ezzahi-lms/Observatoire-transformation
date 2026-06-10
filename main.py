@@ -146,6 +146,7 @@ def run_innovation_pipeline(settings: dict):
         logger.info("Innovation : aucun secteur actif configuré.")
         return
 
+    generated_secteurs = []
     for bloc in active:
         sk = bloc.get("secteur_key", "")
         if sk not in all_sectors:
@@ -165,8 +166,97 @@ def run_innovation_pipeline(settings: dict):
                 clients=clients,
             )
             logger.info(f"Innovation {sk} → {result['report_id']} (en attente de validation)")
+            generated_secteurs.append(secteur_cfg.get("label", sk))
         except Exception as e:
             logger.exception(f"Innovation {sk} : erreur génération : {e}")
+
+    # Notification manager si au moins un rapport généré
+    if generated_secteurs:
+        _notify_manager_after_generation(settings, generated_secteurs)
+
+
+# ── Notification manager post-génération ─────────────────────────────────────
+def _notify_manager_after_generation(settings: dict, secteurs: list):
+    """Envoie la notification manager après génération — ignore silencieusement si SMTP non configuré."""
+    from mailer import send_manager_notification, check_smtp_config
+
+    ok, _ = check_smtp_config()
+    if not ok:
+        logger.info("Innovation : SMTP non configuré — notification manager ignorée.")
+        return
+
+    innov_blocs = load_innov_blocs()
+    # Recherche de l'email manager dans sectors.yaml (bloc manager_validation)
+    manager_email = None
+    manager_nom   = "Manager"
+    for bloc in innov_blocs:
+        mv = bloc.get("manager_validation", {})
+        if mv.get("email"):
+            manager_email = mv["email"]
+            break
+
+    if not manager_email:
+        manager_email = os.environ.get("MANAGER_EMAIL", "")
+    if not manager_email:
+        logger.warning("Innovation : aucun email manager configuré (manager_validation.email ou MANAGER_EMAIL).")
+        return
+
+    try:
+        send_manager_notification(
+            manager_email=manager_email,
+            nb_rapports=len(secteurs),
+            secteurs=secteurs,
+            manager_nom=manager_nom,
+        )
+        logger.info(f"Innovation : notification manager envoyée → {manager_email}")
+    except Exception as e:
+        logger.error(f"Innovation : erreur notification manager : {e}")
+
+
+# ── Jobs relance J+1 / J+2 ───────────────────────────────────────────────────
+def _run_relance(day: int, settings: dict):
+    """Envoie les relances pour tous les rapports encore en attente."""
+    from agent.client_report import list_pending_reports
+    from mailer import send_validation_reminder, check_smtp_config
+
+    ok, _ = check_smtp_config()
+    if not ok:
+        logger.info(f"Relance J+{day} : SMTP non configuré — ignorée.")
+        return
+
+    pending = list_pending_reports()
+    if not pending:
+        logger.info(f"Relance J+{day} : aucun rapport en attente.")
+        return
+
+    innov_blocs = load_innov_blocs()
+    manager_email = None
+    manager_nom   = "Manager"
+    for bloc in innov_blocs:
+        mv = bloc.get("manager_validation", {})
+        if mv.get("email"):
+            manager_email = mv["email"]
+            break
+    if not manager_email:
+        manager_email = os.environ.get("MANAGER_EMAIL", "")
+    if not manager_email:
+        logger.warning(f"Relance J+{day} : aucun email manager configuré.")
+        return
+
+    for rpt in pending:
+        rid     = rpt.get("report_id", "")
+        secteur = rpt.get("secteur", "")
+        try:
+            send_validation_reminder(
+                report_id=rid,
+                manager_email=manager_email,
+                day=day,
+                secteur=secteur,
+                manager_nom=manager_nom,
+            )
+            logger.info(f"Relance J+{day} envoyée — {rid}")
+        except Exception as e:
+            logger.error(f"Relance J+{day} erreur {rid} : {e}")
 
 
 # ── Commande : schedule ────────────────────────────────────────────────────────
@@ -221,6 +311,24 @@ def cmd_schedule(args, settings, sectors):
         replace_existing=True,
     )
 
+    # Relance J+1 : 2e du mois à 09h00
+    scheduler.add_job(
+        lambda: _run_relance(1, settings),
+        CronTrigger(day=2, hour=9, minute=0),
+        id="innovation_relance_j1",
+        name="Relance Innovation J+1",
+        replace_existing=True,
+    )
+
+    # Relance J+2 : 3e du mois à 09h00
+    scheduler.add_job(
+        lambda: _run_relance(2, settings),
+        CronTrigger(day=3, hour=9, minute=0),
+        id="innovation_relance_j2",
+        name="Relance Innovation J+2",
+        replace_existing=True,
+    )
+
     next_veille  = scheduler.get_job("veille_mensuelle").next_run_time
     next_innov   = scheduler.get_job("innovation_mensuelle").next_run_time
     print(f"\nScheduler démarré (Ctrl+C pour arrêter)")
@@ -230,6 +338,7 @@ def cmd_schedule(args, settings, sectors):
     print(f"  Rapports Innovation : le {innov_day} à {innov_hour:02d}h{innov_min:02d}")
     if next_innov:
         print(f"    Prochaine : {next_innov.strftime('%d/%m/%Y %H:%M')}")
+    print(f"  Relances validation : J+1 le 2 à 09h00, J+2 le 3 à 09h00")
     print()
 
     try:

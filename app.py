@@ -588,8 +588,8 @@ with tab_innov:
     _innov_blocs = _raw_yaml.get("rapports_innovation", [])
     _all_sectors = _raw_yaml.get("sectors", {})
 
-    sub_gen, sub_pending, sub_validated, sub_config = st.tabs([
-        "▶ Générer", "⏳ En attente", "✅ Validés", "⚙ Configuration"
+    sub_gen, sub_pending, sub_validated, sub_feedback, sub_config = st.tabs([
+        "▶ Générer", "⏳ En attente", "✅ Validés", "💬 Feedback", "⚙ Configuration"
     ])
 
     # ── Sous-onglet A : Générer ──────────────────────────────────────────────
@@ -690,6 +690,21 @@ with tab_innov:
                     if not _rdata:
                         st.error("Fichier JSON introuvable.")
                         continue
+
+                    # Statut relances
+                    _gen_date = _meta.get("generated_at", "")
+                    if _gen_date:
+                        from datetime import date as _date2, datetime as _dt2
+                        try:
+                            _days_waiting = (_date2.today() - _dt2.fromisoformat(_gen_date).date()).days
+                            if _days_waiting == 0:
+                                st.info("Généré aujourd'hui — relance J+1 demain à 09h00")
+                            elif _days_waiting == 1:
+                                st.warning("⏰ Relance J+1 envoyée (ou en cours) — J+2 demain à 09h00")
+                            elif _days_waiting >= 2:
+                                st.error(f"⚠️ En attente depuis {_days_waiting} jours — relances J+1 et J+2 envoyées")
+                        except Exception:
+                            pass
 
                     _tab_inf, _tab_int = st.tabs(["Infographie client", "Rapport consultant"])
                     with _tab_inf:
@@ -818,7 +833,112 @@ with tab_innov:
                             use_container_width=True,
                         )
 
-    # ── Sous-onglet D : Configuration ────────────────────────────────────────
+    # ── Sous-onglet D : Feedback ─────────────────────────────────────────────
+    with sub_feedback:
+        st.subheader("Suivi des feedbacks client — RDV Innovation")
+        st.caption(
+            "Enregistrez le résultat de chaque rapport envoyé : "
+            "prise de RDV, échanges en cours, ou pas de retour."
+        )
+
+        _all_sent = [r for r in list_all_reports() if r.get("statut") == "envoyé"]
+        if not _all_sent:
+            st.info("Aucun rapport envoyé pour le moment. Les feedbacks apparaissent ici après envoi.")
+        else:
+            # Tableau de synthèse
+            with st.expander("📊 Synthèse par secteur", expanded=False):
+                _fb_rows = []
+                for _r in _all_sent:
+                    _rid2 = _r.get("report_id", "")
+                    _rd2 = load_report(_rid2)
+                    if not _rd2:
+                        continue
+                    _fb = _rd2.get("feedback", {})
+                    _fb_rows.append({
+                        "Secteur": _r.get("secteur", ""),
+                        "Mois": _r.get("mois", ""),
+                        "RDV": _fb.get("rdv_genere", "—") or "—",
+                        "Date envoi": _fb.get("date_envoi", "—") or "—",
+                        "Consultant": _fb.get("consultant", "—") or "—",
+                        "Client": _fb.get("client", "—") or "—",
+                    })
+                if _fb_rows:
+                    try:
+                        import pandas as _pd2
+                        st.dataframe(_pd2.DataFrame(_fb_rows), use_container_width=True)
+                    except ImportError:
+                        for _row2 in _fb_rows:
+                            st.write(_row2)
+                else:
+                    st.info("Aucun feedback enregistré.")
+
+            # Saisie par rapport
+            st.markdown("**Enregistrer un feedback**")
+            _sent_options = {
+                r["report_id"]: f"{r.get('secteur', '')} — {r.get('mois', '')}"
+                for r in _all_sent
+            }
+            _sel_fb_rid = st.selectbox(
+                "Rapport",
+                options=list(_sent_options.keys()),
+                format_func=lambda k: _sent_options.get(k, k),
+                key="feedback_sel_rid",
+            )
+            if _sel_fb_rid:
+                _fb_rdata = load_report(_sel_fb_rid)
+                _cur_fb   = (_fb_rdata or {}).get("feedback", {}) or {}
+
+                _rdv_opts = ["Oui — RDV obtenu", "En cours — échange en cours", "Non — pas de retour"]
+                _rdv_idx  = 0
+                if _cur_fb.get("rdv_genere") == "Oui — RDV obtenu":
+                    _rdv_idx = 0
+                elif _cur_fb.get("rdv_genere") == "En cours — échange en cours":
+                    _rdv_idx = 1
+                elif _cur_fb.get("rdv_genere") == "Non — pas de retour":
+                    _rdv_idx = 2
+
+                _rdv_val = st.radio(
+                    "RDV généré ?",
+                    options=_rdv_opts,
+                    index=_rdv_idx,
+                    horizontal=True,
+                    key=f"rdv_{_sel_fb_rid}",
+                )
+                _ctx_val = st.text_area(
+                    "Contexte / notes (optionnel)",
+                    value=_cur_fb.get("client", ""),
+                    height=80,
+                    key=f"ctx_{_sel_fb_rid}",
+                    placeholder="Ex: Intéressé par la partie IA générative, relancer en juillet",
+                )
+                _cons_val = st.text_input(
+                    "Consultant responsable",
+                    value=_cur_fb.get("consultant", ""),
+                    key=f"cons_{_sel_fb_rid}",
+                )
+
+                if st.button("💾 Enregistrer le feedback", key=f"save_fb_{_sel_fb_rid}",
+                             type="primary"):
+                    if _fb_rdata:
+                        from datetime import datetime as _dt3
+                        _fb_rdata["feedback"] = {
+                            "rdv_genere":  _rdv_val,
+                            "date_envoi":  _cur_fb.get("date_envoi", ""),
+                            "consultant":  _cons_val,
+                            "client":      _ctx_val,
+                        }
+                        _raw_path = INNOV_DIR / f"{_sel_fb_rid}_raw.json"
+                        import json as _jfb
+                        _raw_path.write_text(
+                            _jfb.dumps(_fb_rdata, ensure_ascii=False, indent=2),
+                            encoding="utf-8",
+                        )
+                        st.success("Feedback enregistré.")
+                        st.rerun()
+                    else:
+                        st.error("Rapport introuvable.")
+
+    # ── Sous-onglet E : Configuration ────────────────────────────────────────
     with sub_config:
         st.subheader("Configuration des rapports Innovation")
 

@@ -445,6 +445,11 @@ rapports_innovation:
   - secteur_key: "pharma_maroc"
     geographie: "Maroc & Afrique"
     actif: true
+    manager_validation:
+      email: ""                       # À renseigner : email du manager validateur
+      nom: "Manager LMS"              # Prénom/nom pour les emails de notification
+      delai_validation_heures: 24     # J+1 = 24h, J+2 = 48h
+      envoi_auto_si_pas_reponse: false  # JAMAIS d'envoi automatique sans validation humaine
     clients:
       - nom: "Client Pharma 1"
         contacts:
@@ -458,10 +463,20 @@ rapports_innovation:
   - secteur_key: "banques_maroc"
     geographie: "Maroc & Afrique"
     actif: false
+    manager_validation:
+      email: ""
+      nom: "Manager LMS"
+      delai_validation_heures: 24
+      envoi_auto_si_pas_reponse: false
     clients: []
 
   # ── Rapport Industrie Maroc ──────────────────────────────────────────────
   - secteur_key: "industrie_maroc"
     geographie: "Maroc"
     actif: false
+    manager_validation:
+      email: ""
+      nom: "Manager LMS"
+      delai_validation_heures: 24
+      envoi_auto_si_pas_reponse: false
     clients: []
