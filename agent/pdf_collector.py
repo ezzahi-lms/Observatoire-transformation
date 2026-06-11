@@ -212,12 +212,32 @@ def _score_relevance(text: str, keywords: set) -> int:
 #  SOURCE NAME DEPUIS LE NOM DE FICHIER
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Mojibake courants dans les noms de fichiers WhatsApp (encodage cassé sur Windows)
+_MOJIBAKE = {
+    "ÔÇó": "•", "ÔÇô": "–", "ÔÇö": "—", "ÔÇÖ": "'", "ÔÇÜ": "'",
+    "ÔÇ£": '"', "ÔÇØ": '"', "ÔÿÅ": " ", "Ôÿå": " ", "Ôÿ©": " ",
+    "ÔÇá": "!", "ÔÇ░": " ", "ÔÇ¡": " ", "ÔÇ½": " ", "ÔÇ┤": " ",
+    "☆": " ", "®": "", "+®": "é", "+¨": "è", "+á": "à",
+}
+
+
+def _fix_mojibake(s: str) -> str:
+    for bad, good in _MOJIBAKE.items():
+        s = s.replace(bad, good)
+    return s
+
+
 def _source_name(filename: str) -> str:
     """
     Dérive un nom de source lisible depuis le nom de fichier.
-    Ex: 'Capital N417 • Juin 2026.Pdf' → 'Capital N417'
+    Ex: 'Capital N417 • Juin 2026.Pdf'                         → 'Capital N417'
+    Ex: 'Biblio Observ Transfo_0012_Capital N417 • Juin 2026'  → 'Capital N417'
     """
     name = Path(filename).stem
+    # Corriger le mojibake avant tout traitement
+    name = _fix_mojibake(name)
+    # Supprimer le préfixe WhatsApp "Biblio Observ Transfo_XXXX_"
+    name = re.sub(r"^Biblio\s+Observ\s+Transfo_?\d+_?\s*", "", name, flags=re.IGNORECASE)
     # Remplacer underscores par espaces
     name = name.replace("_", " ")
     # Supprimer la date en début (JJ-MM-AA-...)
@@ -307,17 +327,21 @@ def collect_pdfs(sector_config: dict, settings: dict) -> List[Dict]:
     min_score   = coll_cfg.get("pdf_min_score", 1)
     max_docs    = coll_cfg.get("pdf_max_docs", 20)
 
-    cutoff      = datetime.now() - timedelta(days=days_back)
-    keywords    = _build_sector_keywords(sector_config)
-    articles    = []
-    skipped_old = 0
-    skipped_irr = 0
+    cutoff         = datetime.now() - timedelta(days=days_back)
+    keywords       = _build_sector_keywords(sector_config)
+    articles       = []
+    skipped_old    = 0
+    skipped_irr    = 0
+    _seen_content: set = set()   # empreinte texte pour déduplication contenu identique
 
-    pdf_files = sorted(
-        mag_path.glob("*.pdf") | mag_path.glob("*.PDF") | mag_path.glob("*.Pdf"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,  # plus récent en premier
-    )
+    # Collecter tous les PDFs (insensible à la casse) sans doublons
+    _seen_paths: set = set()
+    _all_pdfs: list = []
+    for p in mag_path.iterdir():
+        if p.suffix.lower() == ".pdf" and p.resolve() not in _seen_paths:
+            _seen_paths.add(p.resolve())
+            _all_pdfs.append(p)
+    pdf_files = sorted(_all_pdfs, key=lambda p: p.stat().st_mtime, reverse=True)
 
     for pdf_path in pdf_files:
         if len(articles) >= max_docs:
@@ -342,6 +366,13 @@ def collect_pdfs(sector_config: dict, settings: dict) -> List[Dict]:
         if not text or len(text) < 80:
             logger.debug(f"PDF vide ou illisible : {pdf_path.name}")
             continue
+
+        # Déduplication contenu (même journal en deux fichiers différents)
+        _fingerprint = text[:200].strip()
+        if _fingerprint in _seen_content:
+            logger.debug(f"PDF doublon contenu ignoré : {pdf_path.name}")
+            continue
+        _seen_content.add(_fingerprint)
 
         # Filtre pertinence
         score = _score_relevance(text, keywords)
