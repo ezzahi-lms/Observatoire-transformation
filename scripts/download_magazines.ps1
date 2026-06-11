@@ -1,19 +1,21 @@
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================================================================
 #  download_magazines.ps1
-#  Ouvre WhatsApp Web sur le groupe Biblio Observ Transfo dans Chrome,
-#  prêt pour télécharger les PDFs via WA Media Downloader Pro.
+#  Ouvre WhatsApp Web dans Chrome, pret pour telecharger les PDFs via
+#  WA Media Downloader Pro.
 #
-#  Usage : raccourci clavier Ctrl+Alt+M (installé par install_shortcut.ps1)
+#  Usage : raccourci clavier Ctrl+Alt+M (installe par install_shortcut.ps1)
 #          ou double-clic sur le .lnk du bureau
-# ─────────────────────────────────────────────────────────────────────────────
+# ===========================================================================
 
 $WHATSAPP_URL  = "https://web.whatsapp.com"
 $GROUP_NAME    = "Biblio Observ Transfo"
 $MAGAZINES_DIR = "C:\Users\LMS\OneDrive - LMS ORH\Bureau\LMS-Orga\Observatoire Transformation\Magazines"
 
-# ── Notification Windows ──────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Notification Windows
+# ---------------------------------------------------------------------------
 function Show-Toast {
-    param([string]$Title, [string]$Message, [string]$Icon = "Info")
+    param([string]$Title, [string]$Message)
     Add-Type -AssemblyName System.Windows.Forms
     $notify = New-Object System.Windows.Forms.NotifyIcon
     $notify.Icon = [System.Drawing.SystemIcons]::Information
@@ -25,18 +27,20 @@ function Show-Toast {
     $notify.Dispose()
 }
 
-# ── Compter les PDFs actuels dans le dossier ─────────────────────────────────
+# ---------------------------------------------------------------------------
+# Compter les PDFs actuels dans le dossier
+# ---------------------------------------------------------------------------
 $before = (Get-ChildItem -Path $MAGAZINES_DIR -Filter "*.pdf" -ErrorAction SilentlyContinue |
            Measure-Object).Count
 
-# ── Chercher si Chrome est déjà ouvert avec WhatsApp Web ─────────────────────
+# ---------------------------------------------------------------------------
+# Ouvrir Chrome sur WhatsApp Web
+# ---------------------------------------------------------------------------
 $chromeProcess = Get-Process -Name "chrome" -ErrorAction SilentlyContinue
 
 if ($chromeProcess) {
-    # Chrome est ouvert — ouvrir un nouvel onglet sur WhatsApp Web
     Start-Process "chrome.exe" -ArgumentList "--new-tab", $WHATSAPP_URL
 } else {
-    # Lancer Chrome sur WhatsApp Web
     $chromePaths = @(
         "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
         "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
@@ -46,12 +50,13 @@ if ($chromeProcess) {
     if ($chromeExe) {
         Start-Process $chromeExe -ArgumentList $WHATSAPP_URL
     } else {
-        # Fallback : ouvrir avec le navigateur par défaut
         Start-Process $WHATSAPP_URL
     }
 }
 
-# ── Mettre Chrome au premier plan ────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Mettre Chrome au premier plan
+# ---------------------------------------------------------------------------
 Start-Sleep -Seconds 1
 $chrome = Get-Process -Name "chrome" -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($chrome) {
@@ -65,11 +70,13 @@ public class WinAPI {
     public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 }
 "@
-    [WinAPI]::ShowWindow($chrome.MainWindowHandle, 9)   # SW_RESTORE
+    [WinAPI]::ShowWindow($chrome.MainWindowHandle, 9)
     [WinAPI]::SetForegroundWindow($chrome.MainWindowHandle)
 }
 
-# ── Instructions ─────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Instructions
+# ---------------------------------------------------------------------------
 $msg = @"
 WhatsApp Web ouvert.
 
@@ -78,7 +85,7 @@ Etapes :
   2. Cliquez sur l'icone WA Media Downloader Pro
   3. Filtrez par PDF
   4. Cliquez Telecharger tout
-  5. Dossier : Magazines
+  5. Dossier cible : Magazines
 
 PDFs actuellement dans le dossier : $before
 "@
@@ -86,18 +93,20 @@ PDFs actuellement dans le dossier : $before
 Add-Type -AssemblyName System.Windows.Forms
 [System.Windows.Forms.MessageBox]::Show(
     $msg,
-    "Download Magazines — LMS ORH",
+    "Download Magazines - LMS ORH",
     [System.Windows.Forms.MessageBoxButtons]::OK,
     [System.Windows.Forms.MessageBoxIcon]::Information
 ) | Out-Null
 
-# ── Vérifier si de nouveaux PDFs ont été ajoutés ─────────────────────────────
+# ---------------------------------------------------------------------------
+# Verifier si de nouveaux PDFs ont ete ajoutes
+# ---------------------------------------------------------------------------
 $after = (Get-ChildItem -Path $MAGAZINES_DIR -Filter "*.pdf" -ErrorAction SilentlyContinue |
           Measure-Object).Count
 
 $nouveaux = $after - $before
 if ($nouveaux -gt 0) {
-    Show-Toast -Title "Magazines mis a jour" -Message "$nouveaux nouveau(x) PDF(s) ajoute(s) dans le dossier."
+    Show-Toast -Title "Magazines mis a jour" -Message "$nouveaux nouveau(x) PDF(s) ajoute(s)."
 } else {
     Show-Toast -Title "Magazines" -Message "Dossier verifie. $after PDFs presents."
 }
