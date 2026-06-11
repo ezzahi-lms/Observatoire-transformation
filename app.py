@@ -283,13 +283,17 @@ with tab_analyse:
             run_settings["reporting"]["formats"] = formats_selected
 
         with st.status("⏳ Analyse en cours…", expanded=True) as status:
-            st.write("🔎 **Étape 1/3** — Collecte des sources (RSS + Web)…")
+            st.write("🔎 **Étape 1/3** — Collecte des sources (RSS · Web · PDF)…")
             try:
                 from agent import collector as col_module
                 articles = col_module.collect(sector_config, run_settings)
                 rss_c = sum(1 for a in articles if a.get("type") == "rss")
                 web_c = sum(1 for a in articles if a.get("type") == "web")
-                st.write(f"✅ **{len(articles)} articles collectés** — RSS : {rss_c} · Web : {web_c}")
+                pdf_c = sum(1 for a in articles if a.get("type") == "pdf")
+                _parts = [f"RSS : {rss_c}", f"Web : {web_c}"]
+                if pdf_c:
+                    _parts.append(f"PDF : {pdf_c}")
+                st.write(f"✅ **{len(articles)} articles collectés** — {' · '.join(_parts)}")
             except Exception as e:
                 status.update(label="❌ Erreur collecte", state="error")
                 st.error(f"Erreur lors de la collecte : {e}")
@@ -975,6 +979,23 @@ with tab_innov:
                 "EMAIL_FROM_NAME = LMS ORH — Veille Innovation",
                 language="toml",
             )
+
+        st.markdown("---")
+        st.markdown("**Sources PDF (Magazines)**")
+        _settings_cfg = load_settings()
+        _mag_dir = (
+            _settings_cfg.get("collection", {}).get("magazines_dir", "")
+            or os.environ.get("MAGAZINES_DIR", "")
+        )
+        if _mag_dir and Path(_mag_dir).exists():
+            _pdf_files = [p for p in Path(_mag_dir).iterdir()
+                          if p.suffix.lower() == ".pdf"]
+            st.success(f"✅ Dossier Magazines : **{len(_pdf_files)} PDF(s)** disponibles")
+            st.caption(_mag_dir)
+        elif _mag_dir:
+            st.warning(f"⚠️ Dossier Magazines configuré mais introuvable : `{_mag_dir}`")
+        else:
+            st.info("Aucun dossier Magazines configuré (`collection.magazines_dir` dans settings.yaml ou variable `MAGAZINES_DIR`).")
 
         st.markdown("---")
         st.markdown("**Historique des rapports**")

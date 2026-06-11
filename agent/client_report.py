@@ -1103,6 +1103,25 @@ def generate_all(
     """
     INNOV_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Collecte articles en amont pour pouvoir reporter le compte dans la progression
+    if articles is None:
+        if progress_callback:
+            progress_callback("Collecte des sources (RSS · Web · PDF)…")
+        try:
+            from agent import collector as col
+            articles = col.collect(secteur_cfg, settings)
+        except Exception as _e:
+            logger.warning(f"Collecte innovation échouée dans generate_all : {_e}")
+            articles = []
+        if progress_callback:
+            rss_c = sum(1 for a in articles if a.get("type") == "rss")
+            web_c = sum(1 for a in articles if a.get("type") == "web")
+            pdf_c = sum(1 for a in articles if a.get("type") == "pdf")
+            _parts = [f"RSS : {rss_c}", f"Web : {web_c}"]
+            if pdf_c:
+                _parts.append(f"PDF magazines : {pdf_c}")
+            progress_callback(f"✅ {len(articles)} sources collectées — {' · '.join(_parts)}")
+
     if progress_callback:
         progress_callback("Génération du contenu LLM…")
 
