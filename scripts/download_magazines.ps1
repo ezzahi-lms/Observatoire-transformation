@@ -1,112 +1,106 @@
 # ===========================================================================
 #  download_magazines.ps1
-#  Ouvre WhatsApp Web dans Chrome, pret pour telecharger les PDFs via
-#  WA Media Downloader Pro.
+#  Lance le telechargement automatique de TOUS les PDFs du groupe WhatsApp
+#  "Biblio Observ Transfo" via Playwright (sans limite de 25 fichiers).
 #
-#  Usage : raccourci clavier Ctrl+Alt+M (installe par install_shortcut.ps1)
-#          ou double-clic sur le .lnk du bureau
+#  Premiere execution : scanner le QR code WhatsApp dans la fenetre qui s'ouvre
+#  Executions suivantes : connexion automatique (session sauvegardee)
+#
+#  Usage : raccourci Ctrl+Alt+M ou double-clic
 # ===========================================================================
 
-$WHATSAPP_URL  = "https://web.whatsapp.com"
-$GROUP_NAME    = "Biblio Observ Transfo"
+$ScriptDir    = Split-Path -Parent $MyInvocation.MyCommand.Path
+$PythonScript = Join-Path $ScriptDir "auto_download_wa_pdfs.py"
 $MAGAZINES_DIR = "C:\Users\LMS\OneDrive - LMS ORH\Bureau\LMS-Orga\Observatoire Transformation\Magazines"
 
 # ---------------------------------------------------------------------------
-# Notification Windows
+# Verifier que le script Python existe
 # ---------------------------------------------------------------------------
-function Show-Toast {
-    param([string]$Title, [string]$Message)
-    Add-Type -AssemblyName System.Windows.Forms
-    $notify = New-Object System.Windows.Forms.NotifyIcon
-    $notify.Icon = [System.Drawing.SystemIcons]::Information
-    $notify.BalloonTipTitle = $Title
-    $notify.BalloonTipText  = $Message
-    $notify.Visible = $true
-    $notify.ShowBalloonTip(6000)
-    Start-Sleep -Milliseconds 6500
-    $notify.Dispose()
+if (-not (Test-Path $PythonScript)) {
+    [System.Windows.Forms.MessageBox]::Show(
+        "Script introuvable :`n$PythonScript",
+        "Erreur",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Error
+    ) | Out-Null
+    exit 1
 }
 
 # ---------------------------------------------------------------------------
-# Compter les PDFs actuels dans le dossier
+# Verifier que Playwright est installe
 # ---------------------------------------------------------------------------
-$before = (Get-ChildItem -Path $MAGAZINES_DIR -Filter "*.pdf" -ErrorAction SilentlyContinue |
-           Measure-Object).Count
-
-# ---------------------------------------------------------------------------
-# Ouvrir Chrome sur WhatsApp Web
-# ---------------------------------------------------------------------------
-$chromeProcess = Get-Process -Name "chrome" -ErrorAction SilentlyContinue
-
-if ($chromeProcess) {
-    Start-Process "chrome.exe" -ArgumentList "--new-tab", $WHATSAPP_URL
-} else {
-    $chromePaths = @(
-        "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-        "$env:ProgramFiles(x86)\Google\Chrome\Application\chrome.exe",
-        "$env:LocalAppData\Google\Chrome\Application\chrome.exe"
+$playwrightCheck = py -3 -c "import playwright; print('ok')" 2>&1
+if ($playwrightCheck -ne "ok") {
+    Add-Type -AssemblyName System.Windows.Forms
+    $install = [System.Windows.Forms.MessageBox]::Show(
+        "Playwright n'est pas installe.`n`nCliquez OK pour l'installer automatiquement (une seule fois).",
+        "Installation requise",
+        [System.Windows.Forms.MessageBoxButtons]::OKCancel,
+        [System.Windows.Forms.MessageBoxIcon]::Information
     )
-    $chromeExe = $chromePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-    if ($chromeExe) {
-        Start-Process $chromeExe -ArgumentList $WHATSAPP_URL
+    if ($install -eq "OK") {
+        Write-Host "Installation de Playwright..."
+        py -3 -m pip install playwright
+        py -3 -m playwright install chromium
+        Write-Host "Installation terminee."
     } else {
-        Start-Process $WHATSAPP_URL
+        exit 0
     }
 }
 
 # ---------------------------------------------------------------------------
-# Mettre Chrome au premier plan
+# Compter les PDFs avant
 # ---------------------------------------------------------------------------
-Start-Sleep -Seconds 1
-$chrome = Get-Process -Name "chrome" -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($chrome) {
-    Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public class WinAPI {
-    [DllImport("user32.dll")]
-    public static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+$before = (Get-ChildItem -Path $MAGAZINES_DIR -Filter "*.pdf" -ErrorAction SilentlyContinue | Measure-Object).Count
+Write-Host "PDFs avant : $before"
+
+# ---------------------------------------------------------------------------
+# Lancer le telechargement
+# ---------------------------------------------------------------------------
+Write-Host ""
+Write-Host "Lancement du telechargement automatique..."
+Write-Host "(Une fenetre de navigateur va s'ouvrir)"
+Write-Host ""
+
+if ($before -eq 0) {
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.MessageBox]::Show(
+        "Une fenetre de navigateur va s'ouvrir.`n`nSi c'est la premiere fois :`n  -> Scannez le QR code avec votre telephone`n`nEnsuite le telechargement demarre automatiquement.",
+        "Download Magazines - LMS ORH",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    ) | Out-Null
+} else {
+    Add-Type -AssemblyName System.Windows.Forms
+    [System.Windows.Forms.MessageBox]::Show(
+        "Telechargement automatique en cours.`n`nDossier actuel : $before PDFs`n`nUne fenetre de navigateur va s'ouvrir.`nNe la fermez pas pendant le telechargement.",
+        "Download Magazines - LMS ORH",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    ) | Out-Null
 }
-"@
-    [WinAPI]::ShowWindow($chrome.MainWindowHandle, 9)
-    [WinAPI]::SetForegroundWindow($chrome.MainWindowHandle)
-}
+
+# Lancer Python (fenetre visible pour voir la progression)
+Start-Process "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -NoExit -Command `"py -3 '$PythonScript'`"" -WindowStyle Normal -Wait
 
 # ---------------------------------------------------------------------------
-# Instructions
+# Compter les PDFs apres
 # ---------------------------------------------------------------------------
-$msg = @"
-WhatsApp Web ouvert.
-
-Etapes :
-  1. Naviguez vers le groupe "$GROUP_NAME"
-  2. Cliquez sur l'icone WA Media Downloader Pro
-  3. Filtrez par PDF
-  4. Cliquez Telecharger tout
-  5. Dossier cible : Magazines
-
-PDFs actuellement dans le dossier : $before
-"@
+$after = (Get-ChildItem -Path $MAGAZINES_DIR -Filter "*.pdf" -ErrorAction SilentlyContinue | Measure-Object).Count
+$nouveaux = $after - $before
 
 Add-Type -AssemblyName System.Windows.Forms
-[System.Windows.Forms.MessageBox]::Show(
-    $msg,
-    "Download Magazines - LMS ORH",
-    [System.Windows.Forms.MessageBoxButtons]::OK,
-    [System.Windows.Forms.MessageBoxIcon]::Information
-) | Out-Null
+$notify = New-Object System.Windows.Forms.NotifyIcon
+$notify.Icon = [System.Drawing.SystemIcons]::Information
+$notify.BalloonTipTitle = "Magazines mis a jour"
 
-# ---------------------------------------------------------------------------
-# Verifier si de nouveaux PDFs ont ete ajoutes
-# ---------------------------------------------------------------------------
-$after = (Get-ChildItem -Path $MAGAZINES_DIR -Filter "*.pdf" -ErrorAction SilentlyContinue |
-          Measure-Object).Count
-
-$nouveaux = $after - $before
 if ($nouveaux -gt 0) {
-    Show-Toast -Title "Magazines mis a jour" -Message "$nouveaux nouveau(x) PDF(s) ajoute(s)."
+    $notify.BalloonTipText = "$nouveaux nouveau(x) PDF(s) telecharge(s). Total : $after PDFs."
 } else {
-    Show-Toast -Title "Magazines" -Message "Dossier verifie. $after PDFs presents."
+    $notify.BalloonTipText = "Aucun nouveau PDF. Dossier a jour ($after PDFs)."
 }
+
+$notify.Visible = $true
+$notify.ShowBalloonTip(8000)
+Start-Sleep -Milliseconds 8500
+$notify.Dispose()
