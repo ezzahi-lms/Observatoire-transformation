@@ -502,7 +502,7 @@
           </td>
           <td>{{ s.source }}</td>
           <td>{{ s.date }}</td>
-          <td><span class="badge" style="background:{% if s.pertinence == 'Directe' %}var(--blue){% else %}var(--blue-mid){% endif %}">{{ s.pertinence }}</span></td>
+          <td><span class="badge" style="background:{% if s.pertinence == 'Directe' %}var(--blue){% elif s.pertinence == 'PDF · Presse' %}#8B1A1A{% else %}var(--blue-mid){% endif %}">{{ s.pertinence }}</span></td>
         </tr>
         {% endfor %}
       </tbody>

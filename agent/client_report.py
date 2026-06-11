@@ -404,16 +404,31 @@ def generate_innovation_report(
     safe_mois  = "".join(c if c.isalnum() else "_" for c in mois)
     report_id  = f"{safe_label}_{safe_mois}"
 
+    # Index des sources pour traçabilité (chemin local masqué pour les PDFs)
+    sources_index = []
+    for i, a in enumerate(articles, 1):
+        _type = a.get("type", "web")
+        sources_index.append({
+            "id":         i,
+            "titre":      a.get("title", "")[:100],
+            "source":     a.get("source", ""),
+            "date":       a.get("date", "N/A"),
+            "type":       _type,
+            "pertinence": "PDF · Presse" if _type == "pdf" else ("Directe" if _type == "rss" else "Web"),
+            "url":        "" if _type == "pdf" else a.get("url", ""),
+        })
+
     result["_meta"] = {
-        "report_id":   report_id,
-        "secteur":     label,
-        "mois":        mois,
-        "geographie":  geographie,
-        "provider":    provider,
-        "model":       model if provider != "anthropic" else analysis_cfg.get("model", ""),
+        "report_id":    report_id,
+        "secteur":      label,
+        "mois":         mois,
+        "geographie":   geographie,
+        "provider":     provider,
+        "model":        model if provider != "anthropic" else analysis_cfg.get("model", ""),
         "generated_at": datetime.now().isoformat(),
-        "statut":      "en_attente",
-        "nb_sources":  len(articles),
+        "statut":       "en_attente",
+        "nb_sources":   len(articles),
+        "sources_index": sources_index,
     }
 
     # Sauvegarde JSON brut
@@ -692,8 +707,11 @@ def generate_infographie_html(
 
   </div>
 
+  <!-- ══ SOURCES INFOGRAPHIE ══ -->
+  {_sources_html_infographie(meta, RULE, GRAY3, BORD)}
+
   <!-- ══ MENTION SOURCE ══ -->
-  <div style="padding:12px 32px 14px;border-top:1px solid {RULE};">
+  <div style="padding:10px 32px 14px;border-top:1px solid {RULE};">
     <div style="font-size:10px;color:{GRAY3};line-height:1.6;">
       Source : LMS ORH — Veille Innovation RH &nbsp;·&nbsp;
       {mois} &nbsp;·&nbsp; Usage exclusif client — ne pas diffuser
@@ -708,6 +726,95 @@ def generate_infographie_html(
 </body>
 </html>"""
     return html
+
+
+def _sources_html_infographie(meta: dict, RULE: str, GRAY3: str, BORD: str) -> str:
+    """Section sources compacte pour l'infographie client (noms de publications uniquement)."""
+    sources = meta.get("sources_index", [])
+    if not sources:
+        return ""
+
+    # Dédupliquer par nom de source, regrouper par type
+    presse  = sorted({s["source"].replace("PDF · ", "") for s in sources if s.get("type") == "pdf"})
+    digital = sorted({s["source"] for s in sources if s.get("type") in ("rss", "web")})
+
+    items_html = ""
+    if presse:
+        items_html += (
+            f'<span style="font-weight:700;color:{BORD};">Presse : </span>'
+            + " &nbsp;·&nbsp; ".join(presse)
+            + ("&nbsp;&nbsp;" if digital else "")
+        )
+    if digital:
+        items_html += (
+            f'<span style="font-weight:700;color:{GRAY3};">Digital : </span>'
+            + " &nbsp;·&nbsp; ".join(digital[:8])
+            + (" …" if len(digital) > 8 else "")
+        )
+
+    if not items_html:
+        return ""
+
+    return (
+        f'<div style="padding:10px 32px 6px;border-top:1px solid {RULE};">'
+        f'<div style="font-size:9px;color:{GRAY3};line-height:1.8;">'
+        f'<span style="text-transform:uppercase;letter-spacing:1px;font-weight:700;">'
+        f'Sources</span> &nbsp;— &nbsp;{items_html}'
+        f'</div></div>'
+    )
+
+
+def _sources_html_interne(meta: dict) -> str:
+    """Génère le tableau HTML des sources pour le rapport consultant."""
+    sources = meta.get("sources_index", [])
+    if not sources:
+        return '<p style="font-size:12px;color:#9A9A9A;font-style:italic;">Sources non indexées.</p>'
+
+    BORD   = "#8B1A1A"
+    GRAY   = "#595959"
+    RULE   = "#E5E5E5"
+    DARK   = "#2D2D2D"
+
+    _badge_color = {
+        "PDF · Presse": BORD,
+        "Directe":      "#2E86C1",
+        "Web":          "#7F8C8D",
+    }
+
+    rows = ""
+    for s in sources:
+        badge_color = _badge_color.get(s.get("pertinence", "Web"), "#7F8C8D")
+        titre = s.get("titre", "—")
+        url   = s.get("url", "")
+        titre_html = (
+            f'<a href="{url}" style="color:{BORD};text-decoration:none;">{titre}</a>'
+            if url else titre
+        )
+        rows += (
+            f'<tr style="border-top:1px solid {RULE};">'
+            f'<td style="padding:6px 8px;font-size:11px;color:{GRAY};font-weight:700;">[{s["id"]}]</td>'
+            f'<td style="padding:6px 8px;font-size:11px;color:{DARK};">{titre_html}</td>'
+            f'<td style="padding:6px 8px;font-size:11px;color:{GRAY};">{s.get("source","")}</td>'
+            f'<td style="padding:6px 8px;font-size:11px;color:{GRAY};">{s.get("date","")}</td>'
+            f'<td style="padding:6px 8px;">'
+            f'<span style="background:{badge_color};color:white;font-size:9px;'
+            f'padding:2px 6px;text-transform:uppercase;letter-spacing:.8px;">'
+            f'{s.get("pertinence","")}</span></td>'
+            f'</tr>'
+        )
+
+    return (
+        f'<table style="width:100%;border-collapse:collapse;font-family:Arial,sans-serif;">'
+        f'<thead><tr style="background:#F5F5F5;">'
+        f'<th style="padding:6px 8px;font-size:10px;text-align:left;width:32px;">N°</th>'
+        f'<th style="padding:6px 8px;font-size:10px;text-align:left;">Titre / Publication</th>'
+        f'<th style="padding:6px 8px;font-size:10px;text-align:left;width:160px;">Source</th>'
+        f'<th style="padding:6px 8px;font-size:10px;text-align:left;width:85px;">Date</th>'
+        f'<th style="padding:6px 8px;font-size:10px;text-align:left;width:95px;">Type</th>'
+        f'</tr></thead>'
+        f'<tbody>{rows}</tbody>'
+        f'</table>'
+    )
 
 
 def generate_rapport_interne(
@@ -873,6 +980,10 @@ def generate_rapport_interne(
     <p style="font-size:15px;font-weight:bold;margin:8px 0 6px;">{sf2.get("titre_interne", "")}</p>
     <p style="font-size:13px;line-height:1.65;margin:0;">{sf2.get("observation_interne", "")}</p>
   </div>
+
+  <!-- SOURCES -->
+  <h2>◎ Sources consultées</h2>
+  {_sources_html_interne(meta)}
 
   <div class="meta">
     Généré le {gen_at} &nbsp;·&nbsp; Provider : {meta.get("provider", "")} &nbsp;·&nbsp;

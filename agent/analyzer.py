@@ -504,13 +504,24 @@ def _build_fallback_index(articles: List[Dict], result: Dict) -> List[Dict]:
                     date_val = datetime.fromisoformat(date_val).strftime("%Y-%m-%d")
                 except Exception:
                     pass
+            _type = a.get("type", "")
+            _pertinence = (
+                "Directe"      if _type == "rss" else
+                "PDF · Presse" if _type == "pdf" else
+                "Contextuelle"
+            )
+            # Pour les PDFs, l'URL est un chemin local — ne pas l'exposer dans le rapport
+            _url = a.get("url", "")
+            if _type == "pdf":
+                _url = ""
             index.append({
                 "id": idx,
                 "titre": a.get("title", "Sans titre")[:120],
                 "source": a.get("source", ""),
-                "url": a.get("url", ""),
+                "url": _url,
                 "date": date_val or "N/A",
-                "pertinence": "Directe" if a.get("type") == "rss" else "Contextuelle",
+                "pertinence": _pertinence,
+                "type": _type,
             })
     return index
 
