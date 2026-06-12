@@ -257,46 +257,57 @@ CDP_PORT = 9222
 
 def launch_chrome_with_debug():
     """Lance Chrome avec le profil existant et le port de debogage CDP."""
-    import subprocess
+    import urllib.request
     if not CHROME_EXE:
         log("ERREUR : Chrome introuvable.")
         sys.exit(1)
 
-    # Tuer Chrome s'il tourne deja sur ce port
+    # Etape 1 : tuer TOUS les processus Chrome et attendre qu'ils soient morts
+    log("Fermeture de Chrome...")
     subprocess.run(["taskkill", "/IM", "chrome.exe", "/F"], capture_output=True)
-    time.sleep(2)
+    for i in range(20):
+        time.sleep(1)
+        result = subprocess.run(
+            ["tasklist", "/FI", "IMAGENAME eq chrome.exe", "/NH"],
+            capture_output=True, text=True
+        )
+        if "chrome.exe" not in result.stdout:
+            log(f"Chrome ferme ({i+1}s).")
+            break
+    else:
+        log("Attention : Chrome toujours en cours apres 20s — on continue quand meme.")
 
-    log("Lancement de Chrome avec votre profil existant (session WhatsApp active)...")
-    # Lancer via PowerShell (Start-Process) — plus fiable sur Windows
-    # pour ouvrir le port de debug CDP
+    time.sleep(1)
+
+    # Etape 2 : lancer Chrome avec le port de debug
+    log("Lancement de Chrome avec votre profil (session WhatsApp active)...")
+    args = " ".join([
+        f'--remote-debugging-port={CDP_PORT}',
+        f'--user-data-dir="{CHROME_PROFILE}"',
+        '--profile-directory=Default',
+        '--no-first-run',
+        '--no-default-browser-check',
+        '"https://web.whatsapp.com"',
+    ])
     subprocess.Popen(
-        [
-            "powershell.exe", "-WindowStyle", "Hidden",
-            "-Command",
-            f'Start-Process "{CHROME_EXE}" -ArgumentList '
-            f'"--remote-debugging-port={CDP_PORT}", '
-            f'"--user-data-dir={CHROME_PROFILE}", '
-            f'"--profile-directory=Default", '
-            f'"--no-first-run", '
-            f'"--no-default-browser-check", '
-            f'"https://web.whatsapp.com"'
-        ],
+        ["powershell.exe", "-WindowStyle", "Hidden", "-Command",
+         f'Start-Process "{CHROME_EXE}" -ArgumentList \'{args}\'']
     )
 
-    # Attendre que le port CDP soit accessible (max 30s)
-    import urllib.request, urllib.error
+    # Etape 3 : attendre que le port CDP soit accessible (max 30s)
     log("Attente du demarrage de Chrome...")
     for i in range(30):
         time.sleep(1)
         try:
             urllib.request.urlopen(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1)
             log(f"Chrome pret ({i+1}s).")
-            break
+            return
         except Exception:
             pass
-    else:
-        log("ERREUR : Chrome n'a pas demarre en 30s.")
-        sys.exit(1)
+
+    log("ERREUR : Chrome n'a pas demarre avec le port debug en 30s.")
+    log(f"Essayez manuellement : {CHROME_EXE} --remote-debugging-port={CDP_PORT}")
+    sys.exit(1)
 
 
 def main():
