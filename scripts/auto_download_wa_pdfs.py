@@ -286,19 +286,38 @@ def main():
     }
     log(f"{len(already_downloaded)} PDFs deja dans le dossier Magazines.")
 
+    # Date du PDF le plus recent dans le dossier
+    pdf_files = [p for p in MAGAZINES_DIR.iterdir() if p.suffix.lower() == ".pdf"]
+    if pdf_files:
+        last_date = max(p.stat().st_mtime for p in pdf_files)
+        from datetime import datetime
+        last_dt = datetime.fromtimestamp(last_date)
+        log(f"Dernier PDF : {last_dt.strftime('%d/%m/%Y')} — telechargement des PDFs posterieurs.")
+
     # Copier la session WhatsApp depuis Chrome (sans fermer Chrome)
     log("Copie de la session WhatsApp depuis Chrome...")
     copy_whatsapp_session()
 
     with sync_playwright() as p:
-        log("Lancement du navigateur Playwright...")
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(AUTH_DIR),
-            headless=False,
-            viewport={"width": 1280, "height": 900},
-            accept_downloads=True,
-            args=["--no-sandbox"],
-        )
+        log("Lancement du navigateur (Chrome installe)...")
+        try:
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(AUTH_DIR),
+                channel="chrome",          # Chrome installe, pas Chromium Playwright
+                headless=False,
+                viewport={"width": 1280, "height": 900},
+                accept_downloads=True,
+            )
+        except Exception as e:
+            log(f"Erreur lancement Chrome : {e}")
+            log("Tentative avec Chromium Playwright...")
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(AUTH_DIR),
+                headless=False,
+                viewport={"width": 1280, "height": 900},
+                accept_downloads=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage"],
+            )
 
         page = context.pages[0] if context.pages else context.new_page()
         page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
