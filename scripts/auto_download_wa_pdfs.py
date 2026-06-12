@@ -52,14 +52,34 @@ def wait(seconds, label=""):
 def wait_for_whatsapp(page):
     """Attend le chargement complet de WhatsApp Web (apres QR ou session)."""
     log("Chargement WhatsApp Web...")
+
+    # Etape 1 : attendre que la page soit prete (QR code OU deja connecte)
     try:
-        # Attente de la liste des conversations
-        page.wait_for_selector('[data-testid="chat-list"]', timeout=120_000)
-        log("WhatsApp Web charge !")
+        page.wait_for_selector(
+            '[data-testid="qrcode"], [data-testid="chat-list"], canvas[aria-label="Scan me!"], #side',
+            timeout=30_000,
+        )
     except PWTimeout:
-        log("TIMEOUT : WhatsApp Web n'a pas charge en 2 minutes.")
-        log("Verifiez que le QR code a bien ete scanne.")
+        log("La page WhatsApp Web ne repond pas. Verifiez votre connexion internet.")
         sys.exit(1)
+
+    # Etape 2 : si QR code present, attendre que l'utilisateur scanne (5 minutes)
+    qr = page.query_selector('[data-testid="qrcode"], canvas[aria-label="Scan me!"]')
+    if qr:
+        log(">> QR CODE AFFICHE <<")
+        log("Scannez le QR code avec WhatsApp sur votre telephone :")
+        log("  WhatsApp -> Menu -> Appareils connectes -> Connecter un appareil")
+        log("Attente du scan (5 minutes max)...")
+        try:
+            page.wait_for_selector(
+                '[data-testid="chat-list"], #side, [data-testid="default-user"]',
+                timeout=300_000,
+            )
+        except PWTimeout:
+            log("QR code non scanne en 5 minutes. Relancez le script.")
+            sys.exit(1)
+
+    log("WhatsApp Web connecte !")
 
 
 def find_group(page):
@@ -236,14 +256,25 @@ def main():
     log(f"{len(already_downloaded)} PDFs deja dans le dossier Magazines.")
 
     with sync_playwright() as p:
-        log("Lancement du navigateur...")
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(AUTH_DIR),
-            headless=False,          # visible pour le QR code
-            viewport={"width": 1280, "height": 900},
-            accept_downloads=True,
-            args=["--no-sandbox"],
-        )
+        log("Lancement du navigateur (Chrome)...")
+        # Utilise Chrome installe sur le PC (evite les problemes de permissions avec Chromium Playwright)
+        try:
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(AUTH_DIR),
+                channel="chrome",
+                headless=False,
+                viewport={"width": 1280, "height": 900},
+                accept_downloads=True,
+            )
+        except Exception as e1:
+            log(f"Chrome echoue ({e1}), tentative avec Chromium...")
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(AUTH_DIR),
+                headless=False,
+                viewport={"width": 1280, "height": 900},
+                accept_downloads=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage"],
+            )
 
         page = context.pages[0] if context.pages else context.new_page()
         page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")

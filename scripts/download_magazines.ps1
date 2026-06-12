@@ -42,10 +42,20 @@ if ($playwrightCheck -ne "ok") {
         Write-Host "Installation de Playwright..."
         py -3 -m pip install playwright
         py -3 -m playwright install chromium
+        py -3 -m playwright install-deps chromium 2>$null
         Write-Host "Installation terminee."
     } else {
         exit 0
     }
+}
+
+# ---------------------------------------------------------------------------
+# Verifier que Chromium est bien telecharge
+# ---------------------------------------------------------------------------
+$chromiumExe = Get-Item "$env:LOCALAPPDATA\ms-playwright\chromium-*\chrome-win64\chrome.exe" -ErrorAction SilentlyContinue
+if (-not $chromiumExe) {
+    Write-Host "Chromium manquant — telechargement en cours..."
+    py -3 -m playwright install chromium
 }
 
 # ---------------------------------------------------------------------------
