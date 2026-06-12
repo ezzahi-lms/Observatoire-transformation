@@ -17,6 +17,8 @@ import os
 import sys
 import time
 import shutil
+import subprocess
+import urllib.request
 from pathlib import Path
 
 MAGAZINES_DIR  = Path(r"C:\Users\LMS\OneDrive - LMS ORH\Bureau\LMS-Orga\Observatoire Transformation\Magazines")
