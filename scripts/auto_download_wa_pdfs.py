@@ -244,45 +244,69 @@ def scroll_and_download_all(page, already_downloaded):
 # ---------------------------------------------------------------------------
 # Point d'entree
 # ---------------------------------------------------------------------------
-def close_chrome_if_running():
-    """Ferme Chrome proprement s'il tourne (necessaire pour utiliser le profil existant)."""
+CHROME_EXE = next(
+    (p for p in [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        str(Path.home() / "AppData/Local/Google/Chrome/Application/chrome.exe"),
+    ] if Path(p).exists()),
+    None
+)
+CDP_PORT = 9222
+
+
+def launch_chrome_with_debug():
+    """Lance Chrome avec le profil existant et le port de debogage CDP."""
     import subprocess
-    result = subprocess.run(
-        ["tasklist", "/FI", "IMAGENAME eq chrome.exe", "/NH"],
-        capture_output=True, text=True
-    )
-    if "chrome.exe" in result.stdout:
-        log("Chrome est ouvert — fermeture en cours (sauvegardez vos onglets)...")
-        subprocess.run(["taskkill", "/IM", "chrome.exe", "/F"], capture_output=True)
-        time.sleep(3)
-        log("Chrome ferme.")
-    else:
-        log("Chrome n'est pas ouvert.")
+    if not CHROME_EXE:
+        log("ERREUR : Chrome introuvable.")
+        sys.exit(1)
+
+    # Tuer Chrome s'il tourne deja sur ce port
+    subprocess.run(["taskkill", "/IM", "chrome.exe", "/F"], capture_output=True)
+    time.sleep(2)
+
+    log("Lancement de Chrome avec votre profil existant (session WhatsApp active)...")
+    subprocess.Popen([
+        CHROME_EXE,
+        f"--remote-debugging-port={CDP_PORT}",
+        f"--user-data-dir={CHROME_PROFILE}",
+        "--profile-directory=Default",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "https://web.whatsapp.com",
+    ])
+    time.sleep(4)
+    log("Chrome lance.")
 
 
 def main():
     MAGAZINES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Fichiers deja presents
     already_downloaded = {
         p.name for p in MAGAZINES_DIR.iterdir() if p.suffix.lower() == ".pdf"
     }
     log(f"{len(already_downloaded)} PDFs deja dans le dossier Magazines.")
 
-    # Fermer Chrome pour pouvoir utiliser son profil (avec session WhatsApp active)
-    close_chrome_if_running()
+    launch_chrome_with_debug()
 
     with sync_playwright() as p:
-        log("Lancement de Chrome avec votre profil existant...")
-        log("(WhatsApp Web sera deja connecte — pas de QR code necessaire)")
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(CHROME_PROFILE),
-            channel="chrome",
-            headless=False,
-            viewport={"width": 1280, "height": 900},
-            accept_downloads=True,
-            args=["--profile-directory=Default"],
-        )
+        log("Connexion a Chrome via CDP...")
+        try:
+            browser = p.chromium.connect_over_cdp(f"http://localhost:{CDP_PORT}")
+        except Exception as e:
+            log(f"ERREUR connexion CDP : {e}")
+            log("Verifiez que Chrome a bien demarre.")
+            sys.exit(1)
+
+        # Recuperer ou creer la page WhatsApp Web
+        contexts = browser.contexts
+        context = contexts[0] if contexts else browser.new_context(accept_downloads=True)
+        pages = context.pages
+        page = next((pg for pg in pages if "whatsapp" in pg.url), None)
+        if not page:
+            page = context.new_page()
+            page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
 
         page = context.pages[0] if context.pages else context.new_page()
         page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
