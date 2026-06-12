@@ -267,17 +267,36 @@ def launch_chrome_with_debug():
     time.sleep(2)
 
     log("Lancement de Chrome avec votre profil existant (session WhatsApp active)...")
-    subprocess.Popen([
-        CHROME_EXE,
-        f"--remote-debugging-port={CDP_PORT}",
-        f"--user-data-dir={CHROME_PROFILE}",
-        "--profile-directory=Default",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "https://web.whatsapp.com",
-    ])
-    time.sleep(4)
-    log("Chrome lance.")
+    # Lancer via PowerShell (Start-Process) — plus fiable sur Windows
+    # pour ouvrir le port de debug CDP
+    subprocess.Popen(
+        [
+            "powershell.exe", "-WindowStyle", "Hidden",
+            "-Command",
+            f'Start-Process "{CHROME_EXE}" -ArgumentList '
+            f'"--remote-debugging-port={CDP_PORT}", '
+            f'"--user-data-dir={CHROME_PROFILE}", '
+            f'"--profile-directory=Default", '
+            f'"--no-first-run", '
+            f'"--no-default-browser-check", '
+            f'"https://web.whatsapp.com"'
+        ],
+    )
+
+    # Attendre que le port CDP soit accessible (max 30s)
+    import urllib.request, urllib.error
+    log("Attente du demarrage de Chrome...")
+    for i in range(30):
+        time.sleep(1)
+        try:
+            urllib.request.urlopen(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1)
+            log(f"Chrome pret ({i+1}s).")
+            break
+        except Exception:
+            pass
+    else:
+        log("ERREUR : Chrome n'a pas demarre en 30s.")
+        sys.exit(1)
 
 
 def main():
@@ -293,7 +312,7 @@ def main():
     with sync_playwright() as p:
         log("Connexion a Chrome via CDP...")
         try:
-            browser = p.chromium.connect_over_cdp(f"http://localhost:{CDP_PORT}")
+            browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CDP_PORT}")
         except Exception as e:
             log(f"ERREUR connexion CDP : {e}")
             log("Verifiez que Chrome a bien demarre.")
