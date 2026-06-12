@@ -1,13 +1,13 @@
 """
 auto_download_wa_pdfs.py
 ------------------------
-Telecharge automatiquement TOUS les PDFs du groupe WhatsApp "Biblio Observ Transfo"
-en utilisant la section Documents de WhatsApp Web (Playwright).
+Telecharge automatiquement TOUS les PDFs du groupe WhatsApp "Biblio Observ Transfo".
 
-- Premiere execution : scanner le QR code une seule fois
-- Executions suivantes : session sauvegardee, aucun QR code requis
-- Pas de limite de 25 fichiers (acces direct a WhatsApp Web, sans extension)
-- Saute les fichiers deja presents dans le dossier Magazines
+Strategie : copie la session WhatsApp de Chrome vers un profil Playwright isole.
+- Chrome n'a pas besoin d'etre ferme
+- Aucun QR code (session deja active dans Chrome)
+- Pas de limite de 25 fichiers
+- Ignore les PDFs deja presents dans Magazines
 
 Usage :
     py -3 scripts/auto_download_wa_pdfs.py
@@ -18,98 +18,121 @@ import sys
 import time
 import shutil
 import subprocess
-import urllib.request
 from pathlib import Path
 
 MAGAZINES_DIR  = Path(r"C:\Users\LMS\OneDrive - LMS ORH\Bureau\LMS-Orga\Observatoire Transformation\Magazines")
-CHROME_PROFILE = Path(r"C:\Users\LMS\AppData\Local\Google\Chrome\User Data")  # profil Chrome existant
+CHROME_PROFILE = Path(r"C:\Users\LMS\AppData\Local\Google\Chrome\User Data\Default")
+AUTH_DIR       = Path.home() / ".wa_playwright_session"
 GROUP_NAME     = "Biblio Observ Transfo"
-TIMEOUT_MS     = 60_000
-
-# ---------------------------------------------------------------------------
-# Dependances
-# ---------------------------------------------------------------------------
-try:
-    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
-except ImportError:
-    print("Playwright non installe. Executez :")
-    print("  py -3 -m pip install playwright")
-    print("  py -3 -m playwright install chromium")
-    sys.exit(1)
 
 
 def log(msg):
     print(f"[WA] {msg}", flush=True)
 
 
-def wait(seconds, label=""):
-    if label:
-        log(f"Attente {seconds}s ({label})...")
-    time.sleep(seconds)
+def wait(s):
+    time.sleep(s)
+
+
+# ---------------------------------------------------------------------------
+# Copier la session WhatsApp Web depuis Chrome
+# ---------------------------------------------------------------------------
+def copy_whatsapp_session():
+    """
+    Copie les donnees de session WhatsApp Web depuis Chrome vers le profil Playwright.
+    Playwright (Chromium) et Chrome utilisent le meme format LevelDB — compatible.
+    """
+    dst = AUTH_DIR / "Default"
+    dst.mkdir(parents=True, exist_ok=True)
+
+    # Dossiers qui stockent la session WhatsApp Web
+    session_folders = [
+        "IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb",
+        "Local Storage/leveldb",
+        "Session Storage",
+    ]
+
+    copied = 0
+    for folder in session_folders:
+        src = CHROME_PROFILE / folder
+        dst_folder = dst / folder
+        if src.exists():
+            try:
+                if dst_folder.exists():
+                    shutil.rmtree(dst_folder)
+                dst_folder.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(str(src), str(dst_folder))
+                copied += 1
+                log(f"  Session copiee : {folder}")
+            except Exception as e:
+                log(f"  Avertissement copie {folder} : {e}")
+
+    if copied == 0:
+        log("Aucune donnee de session trouvee dans Chrome.")
+        log("Vous devrez scanner le QR code lors de la premiere execution.")
+    else:
+        log(f"{copied} dossier(s) de session copie(s) depuis Chrome.")
 
 
 # ---------------------------------------------------------------------------
 # Helpers WhatsApp Web
 # ---------------------------------------------------------------------------
 def wait_for_whatsapp(page):
-    """Attend le chargement complet de WhatsApp Web (apres QR ou session)."""
-    log("Chargement WhatsApp Web...")
+    from playwright.sync_api import TimeoutError as PWTimeout
 
-    # Etape 1 : attendre que la page soit prete (QR code OU deja connecte)
+    log("Chargement WhatsApp Web...")
     try:
         page.wait_for_selector(
-            '[data-testid="qrcode"], [data-testid="chat-list"], canvas[aria-label="Scan me!"], #side',
+            '[data-testid="qrcode"], [data-testid="chat-list"], #side, canvas',
             timeout=30_000,
         )
     except PWTimeout:
-        log("La page WhatsApp Web ne repond pas. Verifiez votre connexion internet.")
+        log("WhatsApp Web ne repond pas — verifiez votre connexion internet.")
         sys.exit(1)
 
-    # Etape 2 : si QR code present malgre le profil existant, attendre scan
-    qr = page.query_selector('[data-testid="qrcode"], canvas[aria-label="Scan me!"]')
+    # Si QR code, attendre scan
+    qr = page.query_selector('[data-testid="qrcode"], canvas')
     if qr:
-        log("QR code affiche (session expiree). Scannez avec votre telephone.")
-        log("  WhatsApp -> Menu -> Appareils connectes -> Connecter un appareil")
+        log("QR code affiche. Scannez avec WhatsApp sur votre telephone :")
+        log("  WhatsApp > Menu > Appareils connectes > Connecter un appareil")
         log("Attente (5 minutes max)...")
         try:
-            page.wait_for_selector(
-                '[data-testid="chat-list"], #side',
-                timeout=300_000,
-            )
+            page.wait_for_selector('[data-testid="chat-list"], #side', timeout=300_000)
         except PWTimeout:
-            log("QR code non scanne. Relancez le script.")
+            log("QR non scanne — relancez le script.")
             sys.exit(1)
 
     log("WhatsApp Web connecte !")
 
 
 def find_group(page):
-    """Cherche et ouvre le groupe cible."""
+    from playwright.sync_api import TimeoutError as PWTimeout
     log(f"Recherche du groupe '{GROUP_NAME}'...")
 
-    # Clic sur l'icone de recherche
-    try:
-        page.click('[data-testid="search"]', timeout=10_000)
-    except PWTimeout:
-        page.click('[aria-label="Rechercher ou démarrer une nouvelle discussion"]', timeout=10_000)
+    # Clic sur la barre de recherche
+    for sel in ['[data-testid="search"]', '[aria-label*="Rechercher"]', '[aria-label*="Search"]']:
+        try:
+            page.click(sel, timeout=5_000)
+            break
+        except PWTimeout:
+            continue
 
     wait(1)
     page.keyboard.type(GROUP_NAME)
     wait(2)
 
-    # Chercher la conversation correspondante
     results = page.query_selector_all('[data-testid="cell-frame-container"]')
     for r in results:
         title = r.query_selector('[data-testid="cell-frame-title"]')
         if title and GROUP_NAME.lower() in title.inner_text().lower():
             r.click()
-            log(f"Groupe '{GROUP_NAME}' ouvert.")
+            log(f"Groupe trouve et ouvert.")
             wait(2)
             return True
 
-    log(f"ERREUR : groupe '{GROUP_NAME}' introuvable.")
-    log("Groupes disponibles :")
-    for r in results[:10]:
+    log(f"ERREUR : groupe '{GROUP_NAME}' introuvable dans les resultats.")
+    log("Groupes visibles :")
+    for r in results[:8]:
         t = r.query_selector('[data-testid="cell-frame-title"]')
         if t:
             log(f"  - {t.inner_text()}")
@@ -117,26 +140,25 @@ def find_group(page):
 
 
 def open_documents_tab(page):
-    """Ouvre le panneau Infos du groupe > Documents."""
-    log("Ouverture de la section Documents du groupe...")
+    from playwright.sync_api import TimeoutError as PWTimeout
+    log("Ouverture de la section Documents...")
 
-    # Clic sur l'en-tete du groupe pour ouvrir les infos
-    try:
-        page.click('[data-testid="conversation-header"]', timeout=10_000)
-    except PWTimeout:
-        # Fallback : chercher le titre du chat en haut
-        page.click('header [data-testid="conversation-info-header"]', timeout=10_000)
+    # Clic sur l'en-tete du groupe
+    for sel in [
+        '[data-testid="conversation-info-header"]',
+        'header [data-testid="conversation-header"]',
+        'header',
+    ]:
+        try:
+            page.click(sel, timeout=5_000)
+            break
+        except PWTimeout:
+            continue
 
     wait(2)
 
-    # Chercher l'onglet Docs / Documents
-    selectors_docs = [
-        'span:text("Docs")',
-        'span:text("Documents")',
-        '[data-testid="media-docs"]',
-        'button:has-text("Docs")',
-    ]
-    for sel in selectors_docs:
+    # Chercher l'onglet Documents / Docs
+    for sel in ['span:text("Docs")', 'span:text("Documents")', 'button:has-text("Docs")']:
         try:
             page.click(sel, timeout=5_000)
             log("Onglet Documents ouvert.")
@@ -145,34 +167,40 @@ def open_documents_tab(page):
         except PWTimeout:
             continue
 
-    log("ERREUR : onglet Documents introuvable.")
+    log("Onglet Documents introuvable — telechargement via messages.")
     return False
 
 
 def download_visible_pdfs(page, already_downloaded):
-    """Telecharge tous les PDFs visibles dans le panneau Documents."""
+    from playwright.sync_api import TimeoutError as PWTimeout
     new_count = 0
 
-    # Chercher tous les elements de document
-    doc_items = page.query_selector_all('[data-testid="media-item"]')
-    if not doc_items:
-        # Fallback selector
-        doc_items = page.query_selector_all('div[role="button"]:has([data-testid="media-icon-document"])')
+    # Chercher les elements PDF dans le panneau
+    selectors = [
+        '[data-testid="media-item"]',
+        '[data-testid="document-thumb"]',
+        'div[class*="document"]',
+    ]
+    doc_items = []
+    for sel in selectors:
+        items = page.query_selector_all(sel)
+        if items:
+            doc_items = items
+            break
 
     log(f"  {len(doc_items)} document(s) visible(s).")
 
     for item in doc_items:
-        # Extraire le nom du fichier
-        filename_el = (
+        # Nom du fichier
+        fn_el = (
             item.query_selector('[data-testid="media-item-filename"]') or
             item.query_selector('span[title]') or
-            item.query_selector('span.x1iyjqo2')  # classe WhatsApp Web
+            item.query_selector('span[class*="filename"]')
         )
-        filename = filename_el.inner_text().strip() if filename_el else ""
+        filename = fn_el.inner_text().strip() if fn_el else ""
 
         if not filename.lower().endswith(".pdf"):
             continue
-
         if filename in already_downloaded:
             continue
 
@@ -181,12 +209,13 @@ def download_visible_pdfs(page, already_downloaded):
             already_downloaded.add(filename)
             continue
 
-        # Clic sur le bouton de telechargement de cet element
+        # Telecharger
         try:
-            dl_btn = item.query_selector('[data-testid="media-download"]')
-            if not dl_btn:
-                dl_btn = item.query_selector('button[aria-label*="echarger"], button[aria-label*="ownload"]')
-
+            dl_btn = (
+                item.query_selector('[data-testid="media-download"]') or
+                item.query_selector('button[aria-label*="echarger"]') or
+                item.query_selector('button[aria-label*="ownload"]')
+            )
             if dl_btn:
                 with page.expect_download(timeout=30_000) as dl_info:
                     dl_btn.click()
@@ -198,7 +227,7 @@ def download_visible_pdfs(page, already_downloaded):
                 new_count += 1
                 wait(0.5)
             else:
-                log(f"  [SKIP] Bouton download introuvable pour : {filename}")
+                log(f"  [SKIP] Bouton download absent : {filename}")
         except Exception as e:
             log(f"  [ERREUR] {filename} : {e}")
 
@@ -206,39 +235,33 @@ def download_visible_pdfs(page, already_downloaded):
 
 
 def scroll_and_download_all(page, already_downloaded):
-    """Fait defiler la liste et telecharge tous les PDFs."""
     total = 0
-    scroll_attempts = 0
-    max_no_new = 3   # Arrete apres 3 defilements sans nouveau PDF
+    no_new = 0
+    scroll = 0
 
-    no_new_streak = 0
-
-    while no_new_streak < max_no_new:
+    while no_new < 3 and scroll < 100:
         new = download_visible_pdfs(page, already_downloaded)
         total += new
+        no_new = 0 if new > 0 else no_new + 1
 
-        if new == 0:
-            no_new_streak += 1
-            log(f"  Aucun nouveau PDF ({no_new_streak}/{max_no_new}) — defilement...")
+        if new > 0:
+            log(f"  +{new} PDFs | Total session : {total}")
         else:
-            no_new_streak = 0
-            log(f"  +{new} PDFs | Total : {total}")
+            log(f"  Aucun nouveau ({no_new}/3) — defilement...")
 
-        # Defiler vers le bas pour charger plus de documents
-        panel = page.query_selector('[data-testid="media-docs-list"]') or \
-                page.query_selector('[data-testid="media-list"]')
-
+        # Defiler dans le panneau
+        panel = (
+            page.query_selector('[data-testid="media-docs-list"]') or
+            page.query_selector('[data-testid="media-list"]') or
+            page.query_selector('#app')
+        )
         if panel:
             panel.evaluate("el => el.scrollTop += el.clientHeight")
         else:
             page.keyboard.press("End")
 
         wait(2)
-        scroll_attempts += 1
-
-        if scroll_attempts > 100:  # securite anti-boucle infinie
-            log("Limite de 100 defilements atteinte.")
-            break
+        scroll += 1
 
     return total
 
@@ -246,99 +269,36 @@ def scroll_and_download_all(page, already_downloaded):
 # ---------------------------------------------------------------------------
 # Point d'entree
 # ---------------------------------------------------------------------------
-CHROME_EXE = next(
-    (p for p in [
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        str(Path.home() / "AppData/Local/Google/Chrome/Application/chrome.exe"),
-    ] if Path(p).exists()),
-    None
-)
-CDP_PORT = 9222
-
-
-def launch_chrome_with_debug():
-    """Lance Chrome avec le profil existant et le port de debogage CDP."""
-    import urllib.request
-    if not CHROME_EXE:
-        log("ERREUR : Chrome introuvable.")
+def main():
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        log("Playwright non installe. Executez :")
+        log("  py -3 -m pip install playwright")
+        log("  py -3 -m playwright install chromium")
         sys.exit(1)
 
-    # Etape 1 : tuer TOUS les processus Chrome et attendre qu'ils soient morts
-    log("Fermeture de Chrome...")
-    subprocess.run(["taskkill", "/IM", "chrome.exe", "/F"], capture_output=True)
-    for i in range(20):
-        time.sleep(1)
-        result = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq chrome.exe", "/NH"],
-            capture_output=True, text=True
-        )
-        if "chrome.exe" not in result.stdout:
-            log(f"Chrome ferme ({i+1}s).")
-            break
-    else:
-        log("Attention : Chrome toujours en cours apres 20s — on continue quand meme.")
-
-    time.sleep(1)
-
-    # Etape 2 : lancer Chrome avec le port de debug
-    log("Lancement de Chrome avec votre profil (session WhatsApp active)...")
-    args = " ".join([
-        f'--remote-debugging-port={CDP_PORT}',
-        f'--user-data-dir="{CHROME_PROFILE}"',
-        '--profile-directory=Default',
-        '--no-first-run',
-        '--no-default-browser-check',
-        '"https://web.whatsapp.com"',
-    ])
-    subprocess.Popen(
-        ["powershell.exe", "-WindowStyle", "Hidden", "-Command",
-         f'Start-Process "{CHROME_EXE}" -ArgumentList \'{args}\'']
-    )
-
-    # Etape 3 : attendre que le port CDP soit accessible (max 30s)
-    log("Attente du demarrage de Chrome...")
-    for i in range(30):
-        time.sleep(1)
-        try:
-            urllib.request.urlopen(f"http://127.0.0.1:{CDP_PORT}/json/version", timeout=1)
-            log(f"Chrome pret ({i+1}s).")
-            return
-        except Exception:
-            pass
-
-    log("ERREUR : Chrome n'a pas demarre avec le port debug en 30s.")
-    log(f"Essayez manuellement : {CHROME_EXE} --remote-debugging-port={CDP_PORT}")
-    sys.exit(1)
-
-
-def main():
     MAGAZINES_DIR.mkdir(parents=True, exist_ok=True)
+    AUTH_DIR.mkdir(parents=True, exist_ok=True)
 
     already_downloaded = {
         p.name for p in MAGAZINES_DIR.iterdir() if p.suffix.lower() == ".pdf"
     }
     log(f"{len(already_downloaded)} PDFs deja dans le dossier Magazines.")
 
-    launch_chrome_with_debug()
+    # Copier la session WhatsApp depuis Chrome (sans fermer Chrome)
+    log("Copie de la session WhatsApp depuis Chrome...")
+    copy_whatsapp_session()
 
     with sync_playwright() as p:
-        log("Connexion a Chrome via CDP...")
-        try:
-            browser = p.chromium.connect_over_cdp(f"http://127.0.0.1:{CDP_PORT}")
-        except Exception as e:
-            log(f"ERREUR connexion CDP : {e}")
-            log("Verifiez que Chrome a bien demarre.")
-            sys.exit(1)
-
-        # Recuperer ou creer la page WhatsApp Web
-        contexts = browser.contexts
-        context = contexts[0] if contexts else browser.new_context(accept_downloads=True)
-        pages = context.pages
-        page = next((pg for pg in pages if "whatsapp" in pg.url), None)
-        if not page:
-            page = context.new_page()
-            page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
+        log("Lancement du navigateur Playwright...")
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(AUTH_DIR),
+            headless=False,
+            viewport={"width": 1280, "height": 900},
+            accept_downloads=True,
+            args=["--no-sandbox"],
+        )
 
         page = context.pages[0] if context.pages else context.new_page()
         page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
@@ -349,18 +309,12 @@ def main():
             context.close()
             sys.exit(1)
 
-        if not open_documents_tab(page):
-            log("Tentative de telechargement via la liste des messages...")
-            # Fallback si l'onglet Documents ne s'ouvre pas
-            total = scroll_and_download_all(page, already_downloaded)
-        else:
-            total = scroll_and_download_all(page, already_downloaded)
+        opened = open_documents_tab(page)
+        total = scroll_and_download_all(page, already_downloaded)
 
-        log(f"\nTermine ! {total} nouveau(x) PDF(s) telecharge(s) dans :")
-        log(f"  {MAGAZINES_DIR}")
-
-        final_count = sum(1 for p in MAGAZINES_DIR.iterdir() if p.suffix.lower() == ".pdf")
-        log(f"Total dans le dossier : {final_count} PDFs")
+        log(f"\nTermine ! {total} nouveau(x) PDF(s) telecharge(s).")
+        final = sum(1 for p in MAGAZINES_DIR.iterdir() if p.suffix.lower() == ".pdf")
+        log(f"Total dans Magazines : {final} PDFs.")
 
         wait(2)
         context.close()
