@@ -19,10 +19,10 @@ import time
 import shutil
 from pathlib import Path
 
-MAGAZINES_DIR = Path(r"C:\Users\LMS\OneDrive - LMS ORH\Bureau\LMS-Orga\Observatoire Transformation\Magazines")
-AUTH_DIR      = Path.home() / ".wa_downloader_auth"   # session sauvegardee
-GROUP_NAME    = "Biblio Observ Transfo"
-TIMEOUT_MS    = 60_000   # 60s max par attente
+MAGAZINES_DIR  = Path(r"C:\Users\LMS\OneDrive - LMS ORH\Bureau\LMS-Orga\Observatoire Transformation\Magazines")
+CHROME_PROFILE = Path(r"C:\Users\LMS\AppData\Local\Google\Chrome\User Data")  # profil Chrome existant
+GROUP_NAME     = "Biblio Observ Transfo"
+TIMEOUT_MS     = 60_000
 
 # ---------------------------------------------------------------------------
 # Dependances
@@ -63,20 +63,19 @@ def wait_for_whatsapp(page):
         log("La page WhatsApp Web ne repond pas. Verifiez votre connexion internet.")
         sys.exit(1)
 
-    # Etape 2 : si QR code present, attendre que l'utilisateur scanne (5 minutes)
+    # Etape 2 : si QR code present malgre le profil existant, attendre scan
     qr = page.query_selector('[data-testid="qrcode"], canvas[aria-label="Scan me!"]')
     if qr:
-        log(">> QR CODE AFFICHE <<")
-        log("Scannez le QR code avec WhatsApp sur votre telephone :")
+        log("QR code affiche (session expiree). Scannez avec votre telephone.")
         log("  WhatsApp -> Menu -> Appareils connectes -> Connecter un appareil")
-        log("Attente du scan (5 minutes max)...")
+        log("Attente (5 minutes max)...")
         try:
             page.wait_for_selector(
-                '[data-testid="chat-list"], #side, [data-testid="default-user"]',
+                '[data-testid="chat-list"], #side',
                 timeout=300_000,
             )
         except PWTimeout:
-            log("QR code non scanne en 5 minutes. Relancez le script.")
+            log("QR code non scanne. Relancez le script.")
             sys.exit(1)
 
     log("WhatsApp Web connecte !")
@@ -245,9 +244,24 @@ def scroll_and_download_all(page, already_downloaded):
 # ---------------------------------------------------------------------------
 # Point d'entree
 # ---------------------------------------------------------------------------
+def close_chrome_if_running():
+    """Ferme Chrome proprement s'il tourne (necessaire pour utiliser le profil existant)."""
+    import subprocess
+    result = subprocess.run(
+        ["tasklist", "/FI", "IMAGENAME eq chrome.exe", "/NH"],
+        capture_output=True, text=True
+    )
+    if "chrome.exe" in result.stdout:
+        log("Chrome est ouvert — fermeture en cours (sauvegardez vos onglets)...")
+        subprocess.run(["taskkill", "/IM", "chrome.exe", "/F"], capture_output=True)
+        time.sleep(3)
+        log("Chrome ferme.")
+    else:
+        log("Chrome n'est pas ouvert.")
+
+
 def main():
     MAGAZINES_DIR.mkdir(parents=True, exist_ok=True)
-    AUTH_DIR.mkdir(parents=True, exist_ok=True)
 
     # Fichiers deja presents
     already_downloaded = {
@@ -255,26 +269,20 @@ def main():
     }
     log(f"{len(already_downloaded)} PDFs deja dans le dossier Magazines.")
 
+    # Fermer Chrome pour pouvoir utiliser son profil (avec session WhatsApp active)
+    close_chrome_if_running()
+
     with sync_playwright() as p:
-        log("Lancement du navigateur (Chrome)...")
-        # Utilise Chrome installe sur le PC (evite les problemes de permissions avec Chromium Playwright)
-        try:
-            context = p.chromium.launch_persistent_context(
-                user_data_dir=str(AUTH_DIR),
-                channel="chrome",
-                headless=False,
-                viewport={"width": 1280, "height": 900},
-                accept_downloads=True,
-            )
-        except Exception as e1:
-            log(f"Chrome echoue ({e1}), tentative avec Chromium...")
-            context = p.chromium.launch_persistent_context(
-                user_data_dir=str(AUTH_DIR),
-                headless=False,
-                viewport={"width": 1280, "height": 900},
-                accept_downloads=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage"],
-            )
+        log("Lancement de Chrome avec votre profil existant...")
+        log("(WhatsApp Web sera deja connecte — pas de QR code necessaire)")
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(CHROME_PROFILE),
+            channel="chrome",
+            headless=False,
+            viewport={"width": 1280, "height": 900},
+            accept_downloads=True,
+            args=["--profile-directory=Default"],
+        )
 
         page = context.pages[0] if context.pages else context.new_page()
         page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
