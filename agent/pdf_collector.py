@@ -334,6 +334,19 @@ def collect_pdfs(sector_config: dict, settings: dict) -> List[Dict]:
     skipped_irr    = 0
     _seen_content: set = set()   # empreinte texte pour déduplication contenu identique
 
+    # Date utilisée pour le tri ET le filtre : date de PUBLICATION (nom de fichier)
+    # avec repli sur la date de modification. Après un import en masse, les mtime
+    # sont quasi identiques — trier dessus rendrait la sélection des plus récents
+    # quasi aléatoire. On trie donc sur la date de parution.
+    def _pub_date(p: Path) -> datetime:
+        ds = _parse_date_from_filename(p.name)
+        if ds:
+            try:
+                return datetime.fromisoformat(ds)
+            except ValueError:
+                pass
+        return datetime.fromtimestamp(p.stat().st_mtime)
+
     # Collecter tous les PDFs (insensible à la casse) sans doublons
     _seen_paths: set = set()
     _all_pdfs: list = []
@@ -341,7 +354,7 @@ def collect_pdfs(sector_config: dict, settings: dict) -> List[Dict]:
         if p.suffix.lower() == ".pdf" and p.resolve() not in _seen_paths:
             _seen_paths.add(p.resolve())
             _all_pdfs.append(p)
-    pdf_files = sorted(_all_pdfs, key=lambda p: p.stat().st_mtime, reverse=True)
+    pdf_files = sorted(_all_pdfs, key=_pub_date, reverse=True)
 
     for pdf_path in pdf_files:
         if len(articles) >= max_docs:
