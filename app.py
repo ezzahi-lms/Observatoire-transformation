@@ -1216,14 +1216,36 @@ with tab_config:
 
     with col_ana:
         st.subheader("🧠 Analyse")
-        model_options = ["claude-sonnet-4-6", "claude-opus-4-5", "claude-haiku-4-5"]
-        current_model = settings.get("analysis", {}).get("model", "claude-sonnet-4-6")
+
+        provider_options = ["anthropic", "gemini", "groq"]
+        current_provider = settings.get("analysis", {}).get("provider", "anthropic")
+        provider = st.selectbox(
+            "Fournisseur LLM",
+            options=provider_options,
+            index=provider_options.index(current_provider) if current_provider in provider_options else 0,
+            format_func=lambda p: {
+                "anthropic": "Anthropic (Claude)",
+                "gemini": "Google Gemini",
+                "groq": "Groq (Llama)",
+            }.get(p, p),
+        )
+        _env_provider = os.environ.get("LLM_PROVIDER")
+        if _env_provider:
+            st.warning(
+                f"⚠️ La variable d'environnement `LLM_PROVIDER = {_env_provider}` est définie "
+                "et **prime sur ce choix**. Supprimez-la dans les Secrets Streamlit pour piloter "
+                "le fournisseur depuis cette page."
+            )
+        st.caption("Anthropic (Claude) recommandé pour la qualité des analyses.")
+
+        model_options = ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]
+        current_model = settings.get("analysis", {}).get("model", "claude-opus-4-8")
         model = st.selectbox(
             "Modèle Claude",
             options=model_options,
             index=model_options.index(current_model) if current_model in model_options else 0,
         )
-        st.caption("Sonnet : équilibre qualité/coût · Opus : qualité max · Haiku : rapide")
+        st.caption("Opus 4.8 : qualité max (recommandé) · Sonnet 4.6 : équilibre qualité/coût · Haiku 4.5 : rapide")
         max_tokens = st.slider(
             "Tokens max par appel",
             min_value=2048, max_value=8192, step=1024,
@@ -1250,6 +1272,7 @@ with tab_config:
 
     st.markdown("---")
     if st.button("💾 Enregistrer les paramètres", type="primary"):
+        settings["analysis"]["provider"] = provider
         settings["analysis"]["model"] = model
         settings["analysis"]["max_tokens"] = int(max_tokens)
         settings["collection"]["days_back"] = int(days_back)
