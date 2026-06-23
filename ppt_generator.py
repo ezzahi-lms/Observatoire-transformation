@@ -407,9 +407,9 @@ def _slide_cover(prs, analysis, mission_config):
 
 def _slide_contexte(prs, analysis, mission_config):
     """Slide 2 — Contexte & Angle RH."""
-    ctx = analysis.get("contexte_mission", {})
-    texte = ctx.get("texte", "")
-    angle = ctx.get("angle_rh", "")
+    ctx = _as_dict(analysis.get("contexte_mission"))
+    texte = ctx.get("texte", "") or ctx.get("angle_organisationnel", "")
+    angle = ctx.get("angle_rh", "") or ctx.get("angle_organisationnel", "")
     angle_strategique = mission_config.get("angle_strategique_rh", "")
     geographie = mission_config.get("geographie", "")
     concurrent = mission_config.get("concurrent_reference", "") or ""
