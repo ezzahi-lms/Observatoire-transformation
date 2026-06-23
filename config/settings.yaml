@@ -15,9 +15,9 @@ collection:
   pdf_min_score: 1          # Score pertinence minimum (nb mots-clés matchés)
   pdf_max_docs: 25          # Nb de PDFs RÉELLEMENT injectés par run — ⚠️ principal levier de coût tokens
 analysis:
-  provider: gemini                  # anthropic | gemini | groq (Anthropic = qualité max, requiert du crédit API)
-  model: claude-opus-4-8            # Modèle Anthropic utilisé si provider=anthropic (prêt si recrédit)
-  gemini_model: gemini-2.5-pro      # Modèle Gemini (si provider=gemini) — Pro = nettement > Flash, quota gratuit AI Studio
+  provider: anthropic               # anthropic | gemini | groq (Anthropic = qualité max)
+  model: claude-opus-4-8            # Modèle Anthropic (si provider=anthropic) — Sonnet 4.6 = ~2x moins cher pour étirer le crédit
+  gemini_model: gemini-2.5-pro      # Modèle Gemini (repli gratuit si provider=gemini)
   gemini_max_tokens: 4096           # Limite sortie Gemini (free tier plus restrictif)
   gemini_max_articles: 12           # Nb articles max envoyés à Gemini (prompt plus court)
   gemini_summary_len: 150           # Longueur résumé article pour Gemini (vs 400 Anthropic)
