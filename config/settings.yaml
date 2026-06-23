@@ -27,6 +27,9 @@ analysis:
   groq_summary_len: 200             # Longueur résumé article pour Groq
   max_tokens: 8192
   temperature: 0.3
+qa:
+  # Contrôle qualité automatique (agent/qa_gate.py) — 100 % code, aucun coût token.
+  min_score: 80            # Score /100 minimum pour qu'un benchmark soit "publiable" ; en dessous → quarantaine
 reporting:
   formats:
   - docx

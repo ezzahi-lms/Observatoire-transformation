@@ -317,6 +317,20 @@ with tab_analyse:
                     f"✅ **Benchmark produit** — {nb_fcs} FCS · {nb_sig} signaux · "
                     f"{nb_rec} recommandations · {nb_src} sources · Fiabilité : **{fiab}**"
                 )
+                # ── Badge contrôle qualité (QA gate) ──
+                qa = analysis.get("_qa") or {}
+                if qa:
+                    _ok = sum(1 for c in qa.get("checks", []) if c.get("passed"))
+                    _tot = len(qa.get("checks", []))
+                    if qa.get("status") == "publiable":
+                        st.success(f"🛡️ Contrôle qualité : **{qa['score']}/100** — publiable "
+                                   f"({_ok}/{_tot} contrôles OK)")
+                    else:
+                        st.warning(f"🛡️ Contrôle qualité : **{qa['score']}/100** — ⚠️ mise en quarantaine "
+                                   f"(seuil {qa.get('min_score', 80)}/100). Relecture recommandée avant diffusion.")
+                        with st.expander("Voir les points à corriger"):
+                            for _iss in qa.get("issues", []):
+                                st.caption(f"• {_iss}")
             except Exception as e:
                 status.update(label="❌ Erreur analyse", state="error")
                 st.error(f"Erreur lors de l'analyse Claude : {e}")
