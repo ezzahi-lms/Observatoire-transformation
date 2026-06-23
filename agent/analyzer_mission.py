@@ -40,8 +40,37 @@ RÈGLES ABSOLUES — NON NÉGOCIABLES :
 4. Si "concurrent_reference" est renseigné, une comparaison explicite apparaît dans chaque axe
 5. INTERDIT : "a tendance à", "doit mettre en place", "les entreprises du secteur généralement" sans fait concret issu des sources
 6. Commence chaque axe par un chiffre clé ou un fait vérifiable
-7. Niveau de certitude à indiquer : [confirmé] / [probable] / [à vérifier]
-8. Langue : français, registre consultant senior"""
+7. Champ "analyse" : 3-4 phrases MAX — format PPT consultant, pas un article de fond. Chaque phrase = 1 fait + 1 implication.
+8. INTERDIT dans les champs texte : NE PAS écrire [confirmé], [probable] ou [à vérifier] — ce sont des notes internes, pas du texte livrable.
+9. Les chiffres macro-économiques généraux (PIB, inflation, taux directeur) ne doivent apparaître QUE dans le slide Contexte — pas répétés dans chaque axe.
+10. Langue : français, registre consultant senior"""
+
+
+SYSTEM_PROMPT_MISSION_ORG = """Tu es un expert senior en transformation organisationnelle et gouvernance opérationnelle, associé chez LMS ORH — cabinet de conseil au Maroc & Afrique.
+
+MISSION : Produire un benchmark organisationnel factuel et actionnable pour la mission "{nom_mission}".
+Entreprise cible : {entreprise_cible} — Secteur : {secteur} — Géographie : {geographie}
+Question centrale : {angle_strategique_rh}
+Référence comparative : {concurrent_reference}
+(Si vide, compare aux leaders reconnus du secteur dans la géographie indiquée)
+
+AXES OBLIGATOIRES :
+1. MODÈLES CSP — Structures et gouvernance des centres de prestation partagés comparables (taille, périmètre fonctionnel délégué, positionnement hiérarchique)
+2. PROCESSUS DOUANIERS — Best practices de gestion des processus import/export et douaniers (procédures, habilitations, outils, points de contrôle, risques)
+3. INTERFACE FILIALE/SIÈGE — Modèles de relation entre CSP filiale et siège Groupe (niveaux d'autonomie, reporting, délégations, protocoles de validation)
+4. FORMALISATION & AUDIT-READINESS — Pratiques de documentation (RACI, fiches de fonctions, référentiels), niveaux de maturité opérationnelle, critères d'un audit interne Groupe réussi
+
+RÈGLES ABSOLUES — NON NÉGOCIABLES :
+1. Chaque axe cite OBLIGATOIREMENT au moins 2 chiffres récents (année ≥ 2023) avec leur source [N]
+2. Chaque axe nomme OBLIGATOIREMENT au moins 2 organisations/entreprises réelles avec un fait précis
+3. Chaque "So what ?" cible DEUX HORIZONS pour {entreprise_cible} : court terme (avant audit Groupe) + moyen terme (évolution structurelle)
+4. Si "concurrent_reference" est renseigné, une comparaison explicite apparaît dans chaque axe
+5. INTERDIT : généraliser sans fait concret issu des sources
+6. Commence chaque axe par un fait vérifiable ou une donnée chiffrée
+7. Champ "analyse" : 3-4 phrases MAX — format PPT consultant, pas un article de fond. Chaque phrase = 1 fait + 1 implication.
+8. INTERDIT dans les champs texte : NE PAS écrire [confirmé], [probable] ou [à vérifier] — ce sont des notes internes, jamais dans le texte livrable.
+9. Les chiffres macro-économiques généraux (PIB, inflation, taux directeur) ne doivent apparaître QUE dans le slide Contexte — pas répétés dans chaque axe.
+10. Langue : français, registre consultant senior"""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -119,6 +148,45 @@ PROMPTS_SLIDES_OPTIONNELLES = {
         "- Conflits sociaux notables si applicable\n"
         "- Pratiques de dialogue social innovantes (acteur nommé)\n"
         "- Cadre légal du dialogue social applicable en {geographie}\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+}
+
+PROMPTS_SLIDES_ORG = {
+    "supply_chain_interne": (
+        "Supply chain & flux internes — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Modèles de coordination entre CSP filiale et usine/production observés\n"
+        "- Outils de gestion des flux utilisés dans des structures similaires\n"
+        "- Indicateurs de performance supply chain typiques (taux de service, délais)\n"
+        "- Exemple concret d'optimisation réussie (acteur nommé + résultats mesurés)\n"
+        "- Points de friction les plus fréquents et solutions adoptées\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "gouvernance_financiere": (
+        "Gouvernance financière & contrôle interne — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Modèles de contrôle financier dans les CSP filiales (délégations, seuils de validation)\n"
+        "- Pratiques de reporting financier filiale/siège observées\n"
+        "- Outils et systèmes financiers les plus déployés (ERP, consolidation)\n"
+        "- Pratiques de prévention des risques financiers et de fraude\n"
+        "- Benchmark {concurrent_reference} si disponible\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "conformite_reglementaire": (
+        "Conformité réglementaire douanière & fiscale — recherche et fournis pour [{geographie}] :\n"
+        "- Cadre légal douanier marocain applicable (Code des douanes, agréments OEA, CTS)\n"
+        "- Évolutions réglementaires récentes (2023-2025) impactant l'import/export\n"
+        "- Risques de non-conformité les plus fréquents et sanctions observées\n"
+        "- Pratiques de conformité proactive adoptées par des acteurs leaders\n"
+        "- Exigences spécifiques pour les filiales de groupes internationaux au Maroc\n"
+        "Cite tes sources [N] et l'année de chaque donnée."
+    ),
+    "matrice_risques": (
+        "Risques opérationnels — recherche et fournis pour [{secteur}] / [{geographie}] :\n"
+        "- Top 5 risques opérationnels identifiés dans des CSP similaires\n"
+        "- Risques spécifiques aux processus douaniers et import/export\n"
+        "- Pratiques de cartographie et de mitigation des risques observées\n"
+        "- Exemple de crise/incident opérationnel géré (acteur nommé + leçons tirées)\n"
+        "- Indicateurs de risque (KRI) typiquement suivis dans le secteur\n"
         "Cite tes sources [N] et l'année de chaque donnée."
     ),
 }
@@ -232,6 +300,22 @@ TOOL_MISSION_RAPIDE = {
                 },
             },
         },
+            "index_sources": {
+                "type": "array",
+                "description": "Index de toutes les sources citées dans le benchmark",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "titre": {"type": "string"},
+                        "source": {"type": "string"},
+                        "url": {"type": "string"},
+                        "date": {"type": "string"},
+                        "pertinence": {"type": "string", "enum": ["Directe", "Contextuelle"]},
+                    },
+                    "required": ["id", "titre", "source", "pertinence"],
+                },
+            },
         "required": [
             "contexte_mission",
             "business_model_rh",
@@ -241,6 +325,155 @@ TOOL_MISSION_RAPIDE = {
             "signaux_faibles",
             "recommandations_mission",
             "slides_optionnelles",
+            "index_sources",
+        ],
+    },
+}
+
+TOOL_MISSION_ORG_RAPIDE = {
+    "name": "mission_benchmark_org",
+    "description": "Stocke le benchmark organisationnel et processus pour la mission.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "contexte_mission": {
+                "type": "object",
+                "properties": {
+                    "texte": {"type": "string"},
+                    "angle_organisationnel": {"type": "string"},
+                },
+                "required": ["texte", "angle_organisationnel"],
+            },
+            "modeles_csp": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "structures_types": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Types de structures CSP observés dans le secteur/géographie",
+                    },
+                    "gouvernance_observee": {"type": "string"},
+                    "perimetre_fonctionnel": {"type": "string"},
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "structures_types", "gouvernance_observee", "perimetre_fonctionnel", "so_what"],
+            },
+            "processus_douaniers": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "bonnes_pratiques": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Best practices de gestion douanière import/export",
+                    },
+                    "outils_systemes": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Outils et systèmes utilisés (ERP, douane, plateformes)",
+                    },
+                    "risques_frequents": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Risques opérationnels douaniers les plus fréquents",
+                    },
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "bonnes_pratiques", "outils_systemes", "risques_frequents", "so_what"],
+            },
+            "interface_filiale_siege": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "modeles_delegation": {"type": "string"},
+                    "protocoles_validation": {"type": "string"},
+                    "reporting_type": {"type": "string"},
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "modeles_delegation", "protocoles_validation", "reporting_type", "so_what"],
+            },
+            "formalisation_audit_readiness": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "niveaux_maturite": {"type": "string"},
+                    "referentiels_utilises": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Référentiels et standards utilisés (RACI, ISO, normes Groupe)",
+                    },
+                    "criteres_audit_groupe": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "Critères typiques d'un audit interne Groupe",
+                    },
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "niveaux_maturite", "referentiels_utilises", "criteres_audit_groupe", "so_what"],
+            },
+            "signaux_faibles": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "string"},
+                        "implication_organisationnelle": {"type": "string"},
+                        "horizon": {"type": "string"},
+                        "pertinence_mission": {"type": "string"},
+                    },
+                    "required": ["signal", "implication_organisationnelle", "horizon", "pertinence_mission"],
+                },
+            },
+            "recommandations_mission": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string"},
+                        "justification": {"type": "string"},
+                        "priorite": {"type": "string", "enum": ["Haute", "Moyenne", "Faible"]},
+                        "kpi": {"type": "string"},
+                        "horizon": {"type": "string"},
+                    },
+                    "required": ["action", "justification", "priorite", "kpi", "horizon"],
+                },
+            },
+            "slides_optionnelles": {
+                "type": "array",
+                "description": "Slides thématiques optionnelles",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "cle": {"type": "string"},
+                        "titre": {"type": "string"},
+                        "observation": {"type": "string"},
+                        "benchmark_sectoriel": {"type": "string"},
+                        "implication_rh": {"type": "string"},
+                        "so_what": {"type": "string"},
+                    },
+                    "required": ["cle", "titre", "observation", "benchmark_sectoriel", "implication_rh", "so_what"],
+                },
+            },
+        },
+            "index_sources": {
+                "type": "array",
+                "description": "Index de toutes les sources citées dans le benchmark",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "titre": {"type": "string"},
+                        "source": {"type": "string"},
+                        "url": {"type": "string"},
+                        "date": {"type": "string"},
+                        "pertinence": {"type": "string", "enum": ["Directe", "Contextuelle"]},
+                    },
+                    "required": ["id", "titre", "source", "pertinence"],
+                },
+            },
+        "required": [
+            "contexte_mission", "modeles_csp", "processus_douaniers",
+            "interface_filiale_siege", "formalisation_audit_readiness",
+            "signaux_faibles", "recommandations_mission", "slides_optionnelles",
+            "index_sources",
         ],
     },
 }
@@ -290,6 +523,47 @@ TOOL_MISSION_PART_A = {
     },
 }
 
+TOOL_MISSION_ORG_PART_A = {
+    "name": "mission_org_part_a",
+    "description": "Partie A Org : contexte_mission, modeles_csp, processus_douaniers.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "contexte_mission": {
+                "type": "object",
+                "properties": {
+                    "texte": {"type": "string"},
+                    "angle_organisationnel": {"type": "string"},
+                },
+                "required": ["texte", "angle_organisationnel"],
+            },
+            "modeles_csp": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "structures_types": {"type": "array", "items": {"type": "string"}},
+                    "gouvernance_observee": {"type": "string"},
+                    "perimetre_fonctionnel": {"type": "string"},
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "structures_types", "gouvernance_observee", "perimetre_fonctionnel", "so_what"],
+            },
+            "processus_douaniers": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "bonnes_pratiques": {"type": "array", "items": {"type": "string"}},
+                    "outils_systemes": {"type": "array", "items": {"type": "string"}},
+                    "risques_frequents": {"type": "array", "items": {"type": "string"}},
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "bonnes_pratiques", "outils_systemes", "risques_frequents", "so_what"],
+            },
+        },
+        "required": ["contexte_mission", "modeles_csp", "processus_douaniers"],
+    },
+}
+
 TOOL_MISSION_PART_B = {
     "name": "mission_part_b",
     "description": "Partie B : gouvernance_rh, innovation_manageriale, signaux_faibles.",
@@ -334,6 +608,53 @@ TOOL_MISSION_PART_B = {
             },
         },
         "required": ["gouvernance_rh", "innovation_manageriale", "signaux_faibles"],
+    },
+}
+
+TOOL_MISSION_ORG_PART_B = {
+    "name": "mission_org_part_b",
+    "description": "Partie B Org : interface_filiale_siege, formalisation_audit_readiness, signaux_faibles.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "interface_filiale_siege": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "modeles_delegation": {"type": "string"},
+                    "protocoles_validation": {"type": "string"},
+                    "reporting_type": {"type": "string"},
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "modeles_delegation", "protocoles_validation", "reporting_type", "so_what"],
+            },
+            "formalisation_audit_readiness": {
+                "type": "object",
+                "properties": {
+                    "analyse": {"type": "string"},
+                    "niveaux_maturite": {"type": "string"},
+                    "referentiels_utilises": {"type": "array", "items": {"type": "string"}},
+                    "criteres_audit_groupe": {"type": "array", "items": {"type": "string"}},
+                    "so_what": {"type": "string"},
+                },
+                "required": ["analyse", "niveaux_maturite", "referentiels_utilises", "criteres_audit_groupe", "so_what"],
+            },
+            "signaux_faibles": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "signal": {"type": "string"},
+                        "implication_organisationnelle": {"type": "string"},
+                        "horizon": {"type": "string"},
+                        "pertinence_mission": {"type": "string"},
+                    },
+                    "required": ["signal", "implication_organisationnelle", "horizon", "pertinence_mission"],
+                },
+            },
+        },
+        "required": ["interface_filiale_siege", "formalisation_audit_readiness", "signaux_faibles"],
     },
 }
 
@@ -424,48 +745,7 @@ def _format_articles(articles: List[Dict], summary_len: int = 400) -> str:
 
 def _call_anthropic(client, model: str, max_tokens: int, system_text: str,
                     tool: dict, tool_name: str, user_prompt: str) -> dict:
-    """
-    Appel Anthropic avec tool_use pour sortie JSON structurée.
-    Si le modèle supporte web_search, effectue d'abord une recherche web
-    pour enrichir les données avant la sortie structurée.
-    """
-    # Étape 1 — Recherche web préliminaire (si claude-3.5+/claude-sonnet-4+)
-    research_context = ""
-    try:
-        research_resp = client.messages.create(
-            model=model,
-            max_tokens=1500,
-            system=system_text,
-            tools=[{"type": "web_search_20250305", "name": "web_search"}],
-            tool_choice={"type": "auto"},
-            messages=[{
-                "role": "user",
-                "content": (
-                    "Effectue des recherches web pour enrichir le benchmark. "
-                    "Cherche des chiffres récents (2023-2025) et des entreprises réelles du secteur. "
-                    "Synthétise tes trouvailles en bullet points courts avec sources et années.\n\n"
-                    + user_prompt[:800]
-                ),
-            }],
-        )
-        for block in research_resp.content:
-            if hasattr(block, "text") and block.text:
-                research_context = block.text
-                logger.info(f"Web search Anthropic — {len(research_context)} chars collectés")
-                break
-    except Exception as e:
-        # web_search non disponible sur ce compte/modèle — on continue sans
-        logger.info(f"Web search ignoré (non disponible) : {e}")
-
-    # Étape 2 — Sortie JSON structurée (avec contexte de recherche si dispo)
-    enriched_prompt = user_prompt
-    if research_context:
-        enriched_prompt = (
-            user_prompt
-            + "\n\n**Données issues de la recherche web (à intégrer obligatoirement) :**\n"
-            + research_context
-        )
-
+    """Appel Anthropic avec tool_use pour sortie JSON structurée."""
     resp = client.messages.create(
         model=model,
         max_tokens=max_tokens,
@@ -614,7 +894,93 @@ Chaque champ entre [crochets] doit être remplacé par du contenu réel et subst
       "horizon": "[horizon]"
     }
   ],
-  "slides_optionnelles": []
+  "slides_optionnelles": [],
+  "index_sources": [
+    {"id": 1, "titre": "[titre de la source 1]", "source": "[nom du média/rapport]", "url": "[url si disponible]", "date": "[date YYYY-MM]", "pertinence": "Directe"},
+    {"id": 2, "titre": "[titre de la source 2]", "source": "[nom du média/rapport]", "url": "", "date": "[date YYYY-MM]", "pertinence": "Contextuelle"}
+  ]
+}
+"""
+
+_GROQ_OUTPUT_FORMAT_ORG = """\
+Tu dois retourner un objet JSON valide avec exactement ces clés.
+Chaque champ entre [crochets] doit être remplacé par du contenu réel et substantiel (jamais vide).
+
+{
+  "contexte_mission": {
+    "texte": "[3-4 phrases sur le contexte sectoriel, les dynamiques de marché, les enjeux organisationnels avec chiffres clés]",
+    "angle_organisationnel": "[2-3 phrases sur l'angle organisationnel central de la mission]"
+  },
+  "modeles_csp": {
+    "analyse": "[3-4 phrases analysant les modèles CSP comparables — citer 1 chiffre et 2 entreprises réelles]",
+    "structures_types": ["[type CSP 1]", "[type CSP 2]", "[type CSP 3]"],
+    "gouvernance_observee": "[2-3 phrases sur les pratiques de gouvernance dans des CSP similaires]",
+    "perimetre_fonctionnel": "[2 phrases sur le périmètre fonctionnel typiquement délégué]",
+    "so_what": "[court terme : ce qu'il faut avant l'audit Groupe] [moyen terme : évolution structurelle cible]"
+  },
+  "processus_douaniers": {
+    "analyse": "[3-4 phrases sur les best practices douanières — citer 1 chiffre et 2 acteurs nommés]",
+    "bonnes_pratiques": ["[bonne pratique 1]", "[bonne pratique 2]", "[bonne pratique 3]"],
+    "outils_systemes": ["[outil 1]", "[outil 2]"],
+    "risques_frequents": ["[risque 1]", "[risque 2]", "[risque 3]"],
+    "so_what": "[court terme : priorité avant audit] [moyen terme : sécurisation des processus]"
+  },
+  "interface_filiale_siege": {
+    "analyse": "[3-4 phrases sur les modèles d'interface filiale/siège observés]",
+    "modeles_delegation": "[2-3 phrases sur les niveaux de délégation et d'autonomie observés]",
+    "protocoles_validation": "[2 phrases sur les protocoles de validation typiques]",
+    "reporting_type": "[2 phrases sur les pratiques de reporting filiale/siège]",
+    "so_what": "[court terme : clarifications urgentes] [moyen terme : formalisation des interfaces]"
+  },
+  "formalisation_audit_readiness": {
+    "analyse": "[3-4 phrases sur les pratiques de formalisation et la maturité opérationnelle]",
+    "niveaux_maturite": "[2-3 phrases sur les niveaux de maturité observés dans des structures similaires]",
+    "referentiels_utilises": ["[référentiel 1]", "[référentiel 2]"],
+    "criteres_audit_groupe": ["[critère audit 1]", "[critère audit 2]", "[critère audit 3]"],
+    "so_what": "[court terme : livrables à préparer avant l'audit] [moyen terme : maturité cible]"
+  },
+  "signaux_faibles": [
+    {
+      "signal": "[signal faible 1 — tendance émergente dans la gouvernance des CSP]",
+      "implication_organisationnelle": "[implication organisationnelle concrète]",
+      "horizon": "[court / moyen / long terme]",
+      "pertinence_mission": "[en quoi ce signal est pertinent pour la mission]"
+    },
+    {
+      "signal": "[signal faible 2]",
+      "implication_organisationnelle": "[implication]",
+      "horizon": "[horizon]",
+      "pertinence_mission": "[pertinence]"
+    }
+  ],
+  "recommandations_mission": [
+    {
+      "action": "[recommandation 1 — action prioritaire avant audit Groupe]",
+      "justification": "[pourquoi, basé sur le benchmark]",
+      "priorite": "Haute",
+      "kpi": "[indicateur de succès]",
+      "horizon": "[ex : avant juillet 2026]"
+    },
+    {
+      "action": "[recommandation 2]",
+      "justification": "[justification]",
+      "priorite": "Moyenne",
+      "kpi": "[kpi]",
+      "horizon": "[horizon]"
+    },
+    {
+      "action": "[recommandation 3]",
+      "justification": "[justification]",
+      "priorite": "Moyenne",
+      "kpi": "[kpi]",
+      "horizon": "[horizon]"
+    }
+  ],
+  "slides_optionnelles": [],
+  "index_sources": [
+    {"id": 1, "titre": "[titre CSP ou douane source 1]", "source": "[nom du média/rapport]", "url": "[url si disponible]", "date": "[date YYYY-MM]", "pertinence": "Directe"},
+    {"id": 2, "titre": "[titre source 2]", "source": "[nom]", "url": "", "date": "[date]", "pertinence": "Contextuelle"}
+  ]
 }
 """
 
@@ -624,7 +990,12 @@ def _check_empty(data: dict) -> tuple[bool, int, int]:
     TEXT_KEYS = {"texte", "analyse", "so_what", "tendances_effectifs",
                  "instances_rh", "politiques_sociales", "conformite",
                  "externalisation", "experience_employe", "signal",
-                 "implication_rh", "action", "justification"}
+                 "implication_rh", "action", "justification",
+                 # type Organisationnel
+                 "angle_organisationnel", "gouvernance_observee", "perimetre_fonctionnel",
+                 "modeles_delegation", "protocoles_validation", "reporting_type",
+                 "niveaux_maturite", "implication_organisationnelle",
+                 }
     empty, total = 0, 0
     def _walk(obj):
         nonlocal empty, total
@@ -645,11 +1016,13 @@ def _check_empty(data: dict) -> tuple[bool, int, int]:
 
 
 def _call_groq(model_name: str, max_tokens: int, system_text: str,
-               tool: dict, tool_name: str, user_prompt: str) -> dict:
+               tool: dict, tool_name: str, user_prompt: str,
+               output_format: str = None) -> dict:
     """
     Appel Groq avec JSON mode.
     Utilise une description humaine des champs (pas le schéma JSON brut)
     pour éviter que le modèle 'remplisse le template' avec des chaînes vides.
+    output_format : gabarit JSON humain à utiliser (défaut : _GROQ_OUTPUT_FORMAT).
     """
     try:
         from groq import Groq
@@ -662,12 +1035,11 @@ def _call_groq(model_name: str, max_tokens: int, system_text: str,
 
     client = Groq(api_key=api_key)
 
-    # On n'intègre PAS le schéma JSON brut (ça confond le modèle).
-    # On donne une description humaine avec des exemples de contenu attendu.
+    fmt = output_format if output_format is not None else _GROQ_OUTPUT_FORMAT
     system_final = (
         f"{system_text}\n\n"
         f"FORMAT DE RÉPONSE :\n"
-        f"{_GROQ_OUTPUT_FORMAT}\n"
+        f"{fmt}\n"
         f"RAPPEL : Remplace TOUS les textes entre [crochets] par du vrai contenu. "
         f"Ne retourne pas de crochets dans ta réponse. "
         f"Chaque champ texte = minimum 2 phrases avec des faits concrets."
@@ -718,12 +1090,13 @@ def _call_groq(model_name: str, max_tokens: int, system_text: str,
 
 def _call_llm(provider: str, model: str, max_tokens: int, system_text: str,
               tool: dict, tool_name: str, user_prompt: str,
-              client=None) -> dict:
+              client=None, output_format: str = None) -> dict:
     """Dispatcher : appelle Anthropic, Gemini ou Groq selon le provider."""
     if provider == "gemini":
         return _call_gemini(model, max_tokens, system_text, tool, tool_name, user_prompt)
     elif provider == "groq":
-        return _call_groq(model, max_tokens, system_text, tool, tool_name, user_prompt)
+        return _call_groq(model, max_tokens, system_text, tool, tool_name, user_prompt,
+                          output_format=output_format)
     else:
         if client is None:
             raise ValueError("client Anthropic requis pour provider='anthropic'.")
@@ -825,8 +1198,11 @@ def analyze_mission(
     periode = mission_config.get("periode", "6 derniers mois")
     mode = mission_config.get("mode", "Rapide")
     slides_optionnelles = mission_config.get("slides_optionnelles", [])
+    mission_type = mission_config.get("type", "RH").upper()
+    is_org = (mission_type == "ORGANISATIONNEL")
 
-    system_text = SYSTEM_PROMPT_MISSION.format(
+    _prompt_tpl = SYSTEM_PROMPT_MISSION_ORG if is_org else SYSTEM_PROMPT_MISSION
+    system_text = _prompt_tpl.format(
         nom_mission=nom_mission,
         entreprise_cible=entreprise_cible,
         secteur=secteur,
@@ -834,6 +1210,7 @@ def analyze_mission(
         angle_strategique_rh=angle,
         concurrent_reference=concurrent_reference,
     )
+    slides_source = PROMPTS_SLIDES_ORG if is_org else PROMPTS_SLIDES_OPTIONNELLES
 
     # Pour Gemini / Groq free tier : limiter articles et longueur des résumés
     articles_for_llm = articles
@@ -856,8 +1233,8 @@ def analyze_mission(
     # Prompts spécifiques pour les slides optionnelles demandées
     slides_prompts_extra = ""
     for sl_key in slides_optionnelles:
-        if sl_key in PROMPTS_SLIDES_OPTIONNELLES:
-            prompt_tpl = PROMPTS_SLIDES_OPTIONNELLES[sl_key]
+        if sl_key in slides_source:
+            prompt_tpl = slides_source[sl_key]
             slides_prompts_extra += (
                 f"\n\n--- SLIDE OPTIONNELLE : {sl_key} ---\n"
                 + prompt_tpl.format(
@@ -875,7 +1252,14 @@ def analyze_mission(
         else ""
     )
 
-    base_prompt = f"""Benchmark RH Mission — **{nom_mission}**
+    _bench_label = "Organisationnel" if is_org else "RH"
+    _so_what_rule = (
+        f'- "So what ?" cible DEUX HORIZONS pour {entreprise_cible} : '
+        f'court terme (avant audit Groupe) + moyen terme (évolution structurelle)'
+        if is_org else
+        f'- "So what ?" SPÉCIFIQUE à {entreprise_cible} sur chaque slide'
+    )
+    base_prompt = f"""Benchmark {_bench_label} Mission — **{nom_mission}**
 Entreprise cible : **{entreprise_cible}** — Secteur : **{secteur}** — Géographie : **{geographie}**
 Angle stratégique : {angle}
 Période couverte : {periode}{concurrent_line}
@@ -883,7 +1267,7 @@ Période couverte : {periode}{concurrent_line}
 RAPPEL RÈGLES ABSOLUES :
 - Citer au minimum 2 chiffres réels (≥ 2023) avec source [N] par axe
 - Nommer au minimum 2 entreprises réelles du secteur par axe
-- "So what ?" SPÉCIFIQUE à {entreprise_cible} sur chaque slide
+{_so_what_rule}
 - INTERDIT de généraliser sans fait concret issu des sources ci-dessous
 
 **Sources collectées (citer via [N]) :**
@@ -905,11 +1289,30 @@ RAPPEL RÈGLES ABSOLUES :
             if progress_callback:
                 progress_callback(0, 1, f"Appel {provider.title()} unique — Mode Rapide…")
             slides_labels = ", ".join(slides_optionnelles) if slides_optionnelles else "aucune"
+            if is_org:
+                _tool_rapide = TOOL_MISSION_ORG_RAPIDE
+                _tool_name_rapide = "mission_benchmark_org"
+                _sections_rapide = (
+                    "contexte_mission, modeles_csp, processus_douaniers, "
+                    "interface_filiale_siege, formalisation_audit_readiness, "
+                    "signaux_faibles (max 3), recommandations_mission (exactement 3), "
+                    "index_sources (toutes les sources [N] citées)"
+                )
+                _groq_fmt = _GROQ_OUTPUT_FORMAT_ORG
+            else:
+                _tool_rapide = TOOL_MISSION_RAPIDE
+                _tool_name_rapide = "mission_benchmark"
+                _sections_rapide = (
+                    "contexte_mission, business_model_rh, organisation_dimensionnement, "
+                    "gouvernance_rh, innovation_manageriale, signaux_faibles (max 3), "
+                    "recommandations_mission (exactement 3), "
+                    "index_sources (toutes les sources [N] citées)"
+                )
+                _groq_fmt = None
             prompt = (
                 base_prompt
-                + "\n\nUtilise `mission_benchmark` pour produire le benchmark complet en un seul appel : "
-                "contexte_mission, business_model_rh, organisation_dimensionnement, gouvernance_rh, "
-                "innovation_manageriale, signaux_faibles (max 3), recommandations_mission (exactement 3)."
+                + f"\n\nUtilise `{_tool_name_rapide}` pour produire le benchmark complet en un seul appel : "
+                + _sections_rapide + "."
                 + (
                     f"\n\nSlides optionnelles demandées : {slides_labels}. "
                     f"Remplis slides_optionnelles avec 1 item par thème coché "
@@ -920,7 +1323,8 @@ RAPPEL RÈGLES ABSOLUES :
             )
             result = _call_llm(
                 provider, model, max_tokens, system_text,
-                TOOL_MISSION_RAPIDE, "mission_benchmark", prompt, client,
+                _tool_rapide, _tool_name_rapide, prompt, client,
+                output_format=_groq_fmt,
             )
             _save_tmp(tmp, result)
 
@@ -930,6 +1334,7 @@ RAPPEL RÈGLES ABSOLUES :
         result["_meta"] = {
             "provider": provider, "model": model,
             "mode": "Rapide",
+            "type": mission_type,
             "mission": nom_mission,
             "entreprise": entreprise_cible,
             "generated_at": datetime.now().isoformat(),
@@ -947,6 +1352,49 @@ RAPPEL RÈGLES ABSOLUES :
         max_tokens = analysis_cfg.get("groq_max_tokens", 8192)
     else:
         max_tokens = 8192
+
+    # Sélection des outils selon le type de benchmark
+    if is_org:
+        _tool_a, _name_a = TOOL_MISSION_ORG_PART_A, "mission_org_part_a"
+        _tool_b, _name_b = TOOL_MISSION_ORG_PART_B, "mission_org_part_b"
+        _label_a = "Contexte, Modèles CSP, Processus douaniers"
+        _label_b = "Interface Filiale/Siège, Formalisation & Audit-readiness, Signaux faibles"
+        _sections_a = (
+            "1. contexte_mission (résumé de la mission et de l'angle organisationnel)\n"
+            "2. modeles_csp (structures CSP comparables, gouvernance, périmètre, so_what pour "
+            + entreprise_cible + ")\n"
+            "3. processus_douaniers (best practices import/export, outils, risques, so_what pour "
+            + entreprise_cible + ")"
+        )
+        _sections_b = (
+            "1. interface_filiale_siege (délégation, protocoles, reporting, so_what pour "
+            + entreprise_cible + ")\n"
+            "2. formalisation_audit_readiness (maturité, référentiels, critères audit Groupe, so_what pour "
+            + entreprise_cible + ")\n"
+            "3. signaux_faibles (max 3 : signal, implication_organisationnelle, horizon, pertinence_mission)"
+        )
+        _groq_fmt_approfondi = _GROQ_OUTPUT_FORMAT_ORG
+    else:
+        _tool_a, _name_a = TOOL_MISSION_PART_A, "mission_part_a"
+        _tool_b, _name_b = TOOL_MISSION_PART_B, "mission_part_b"
+        _label_a = "Contexte, Business Model RH, Organisation"
+        _label_b = "Gouvernance RH, Innovation managériale, Signaux faibles"
+        _sections_a = (
+            "1. contexte_mission (résumé de la mission et de l'angle RH)\n"
+            "2. business_model_rh (analyse, compétences émergentes/obsolètes, so_what pour "
+            + entreprise_cible + ")\n"
+            "3. organisation_dimensionnement (analyse, tendances effectifs, nouveaux rôles, "
+            "externalisation, so_what pour " + entreprise_cible + ")"
+        )
+        _sections_b = (
+            "1. gouvernance_rh (analyse, instances RH, politiques sociales, conformité, so_what pour "
+            + entreprise_cible + ")\n"
+            "2. innovation_manageriale (analyse, pratiques différenciantes, outils RH, expérience employé, "
+            "so_what pour " + entreprise_cible + ")\n"
+            "3. signaux_faibles (max 3 : signal, implication_rh, horizon, pertinence_mission)"
+        )
+        _groq_fmt_approfondi = None
+
     tmp_a = _tmp_path(reports_dir, entreprise_cible, "part_a")
     tmp_b = _tmp_path(reports_dir, entreprise_cible, "part_b")
     tmp_c = _tmp_path(reports_dir, entreprise_cible, "part_c")
@@ -955,19 +1403,16 @@ RAPPEL RÈGLES ABSOLUES :
     part_a = _load_tmp(tmp_a)
     if part_a is None:
         if progress_callback:
-            progress_callback(0, 3, "Appel 1/3 — Contexte, Business Model RH, Organisation…")
+            progress_callback(0, 3, f"Appel 1/3 — {_label_a}…")
         prompt_a = (
             base_prompt
-            + "\n\nUtilise `mission_part_a` pour les sections :\n"
-            "1. contexte_mission (résumé de la mission et de l'angle RH)\n"
-            "2. business_model_rh (analyse, compétences émergentes/obsolètes, so_what pour "
-            + entreprise_cible + ")\n"
-            "3. organisation_dimensionnement (analyse, tendances effectifs, nouveaux rôles, "
-            "externalisation, so_what pour " + entreprise_cible + ")"
+            + f"\n\nUtilise `{_name_a}` pour les sections :\n"
+            + _sections_a
         )
         part_a = _call_llm(
             provider, model, max_tokens, system_text,
-            TOOL_MISSION_PART_A, "mission_part_a", prompt_a, client,
+            _tool_a, _name_a, prompt_a, client,
+            output_format=_groq_fmt_approfondi,
         )
         _save_tmp(tmp_a, part_a)
     else:
@@ -978,19 +1423,16 @@ RAPPEL RÈGLES ABSOLUES :
     part_b = _load_tmp(tmp_b)
     if part_b is None:
         if progress_callback:
-            progress_callback(1, 3, "Appel 2/3 — Gouvernance RH, Innovation managériale, Signaux faibles…")
+            progress_callback(1, 3, f"Appel 2/3 — {_label_b}…")
         prompt_b = (
             base_prompt
-            + "\n\nUtilise `mission_part_b` pour les sections :\n"
-            "1. gouvernance_rh (analyse, instances RH, politiques sociales, conformité, so_what pour "
-            + entreprise_cible + ")\n"
-            "2. innovation_manageriale (analyse, pratiques différenciantes, outils RH, expérience employé, "
-            "so_what pour " + entreprise_cible + ")\n"
-            "3. signaux_faibles (max 3 : signal, implication_rh, horizon, pertinence_mission)"
+            + f"\n\nUtilise `{_name_b}` pour les sections :\n"
+            + _sections_b
         )
         part_b = _call_llm(
             provider, model, max_tokens, system_text,
-            TOOL_MISSION_PART_B, "mission_part_b", prompt_b, client,
+            _tool_b, _name_b, prompt_b, client,
+            output_format=_groq_fmt_approfondi,
         )
         _save_tmp(tmp_b, part_b)
     else:
@@ -1035,6 +1477,7 @@ RAPPEL RÈGLES ABSOLUES :
     result["_meta"] = {
         "provider": provider, "model": model,
         "mode": "Approfondi",
+        "type": mission_type,
         "mission": nom_mission,
         "entreprise": entreprise_cible,
         "generated_at": datetime.now().isoformat(),

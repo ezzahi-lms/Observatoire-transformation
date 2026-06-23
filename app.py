@@ -429,17 +429,33 @@ with tab_analyse:
 # ONGLET 2 — BENCHMARK MISSION
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_mission:
-    st.header("🎯 Benchmark Mission — Consultant RH")
+    st.header("🎯 Benchmark Mission — Consultant")
     st.caption("Générez un benchmark stratégique personnalisé pour votre mission, livré en PPT LMS.")
 
     # ── Formulaire de configuration ──
     with st.form("form_mission"):
         st.subheader("Configuration de la mission")
 
+        mission_type_sel = st.radio(
+            "Type de benchmark",
+            ["RH", "Organisationnel"],
+            horizontal=True,
+            help=(
+                "**RH** : axes Business Model RH, Organisation/Effectifs, Gouvernance RH, Innovation managériale. "
+                "**Organisationnel** : axes Modèles CSP, Processus douaniers, Interface Filiale/Siège, "
+                "Formalisation & Audit-readiness."
+            ),
+        )
+
         col1, col2 = st.columns(2)
         with col1:
-            nom_mission = st.text_input("Nom de la mission *", placeholder="Ex: Diagnostic RH — BEL Groupe")
-            entreprise_cible = st.text_input("Entreprise / Acteur cible *", placeholder="Ex: BEL Groupe, OCP, Marjane…")
+            _mission_ph = (
+                "Ex: Diagnostic organisationnel SIEPF — BEL Maroc"
+                if mission_type_sel == "Organisationnel" else
+                "Ex: Diagnostic RH — BEL Groupe"
+            )
+            nom_mission = st.text_input("Nom de la mission *", placeholder=_mission_ph)
+            entreprise_cible = st.text_input("Entreprise / Acteur cible *", placeholder="Ex: BEL Maroc, OCP, Marjane…")
             secteur_mission = st.selectbox("Secteur d'activité *", [
                 "Agroalimentaire", "Industrie & Manufacturing", "Banque & Finance",
                 "Assurance", "Santé & Pharma", "Retail & Distribution",
@@ -457,13 +473,21 @@ with tab_mission:
                 ["3 derniers mois", "6 derniers mois", "12 derniers mois", "24 derniers mois"],
                 index=1)
 
-        angle_strategique = st.text_area(
-            "Angle stratégique RH * (3-4 phrases)",
-            placeholder=(
-                "Décrivez la question centrale de votre mission.\n"
+        if mission_type_sel == "Organisationnel":
+            _angle_ph = (
+                "Décrivez les axes de votre benchmark.\n"
+                "Ex : Comparer les pratiques de gestion douanière et les modèles organisationnels "
+                "des CSP similaires à la SIEPF, au regard des standards du Groupe Bel."
+            )
+        else:
+            _angle_ph = (
+                "Décrivez les axes de votre benchmark.\n"
                 "Ex : Comment BEL Groupe structure-t-il ses équipes RH pour accompagner son expansion "
                 "en Afrique ? Quelles compétences clés sont en tension ?"
-            ),
+            )
+        angle_strategique = st.text_area(
+            "Axes du benchmark / Question centrale *",
+            placeholder=_angle_ph,
             max_chars=600, height=110
         )
         concurrent_reference = st.text_input(
@@ -490,16 +514,24 @@ with tab_mission:
         st.markdown("**Slides thématiques optionnelles**")
         sl_cols = st.columns(4)
         slides_cochees = []
-        slides_dispo = [
-            ("effectifs_dimensionnement", "Effectifs & dimensionnement"),
-            ("recrutement_talent", "Recrutement & talent"),
-            ("formation_competences", "Formation & compétences"),
-            ("culture_engagement", "Culture & engagement"),
-            ("remuneration_social", "Rémunération & social"),
-            ("sirh_digitalisation", "SIRH & digitalisation RH"),
-            ("diversite_inclusion", "Diversité & inclusion"),
-            ("relations_sociales", "Relations sociales"),
-        ]
+        if mission_type_sel == "Organisationnel":
+            slides_dispo = [
+                ("supply_chain_interne", "Supply chain interne"),
+                ("gouvernance_financiere", "Gouvernance financière"),
+                ("conformite_reglementaire", "Conformité réglementaire"),
+                ("matrice_risques", "Matrice des risques"),
+            ]
+        else:
+            slides_dispo = [
+                ("effectifs_dimensionnement", "Effectifs & dimensionnement"),
+                ("recrutement_talent", "Recrutement & talent"),
+                ("formation_competences", "Formation & compétences"),
+                ("culture_engagement", "Culture & engagement"),
+                ("remuneration_social", "Rémunération & social"),
+                ("sirh_digitalisation", "SIRH & digitalisation RH"),
+                ("diversite_inclusion", "Diversité & inclusion"),
+                ("relations_sociales", "Relations sociales"),
+            ]
         for i, (key, label) in enumerate(slides_dispo):
             with sl_cols[i % 4]:
                 if st.checkbox(label, key=f"sl_{key}"):
@@ -510,7 +542,7 @@ with tab_mission:
     if submitted:
         # Validation
         if not nom_mission or not entreprise_cible or not angle_strategique:
-            st.error("⚠️ Les champs Nom de la mission, Entreprise cible et Angle stratégique RH sont obligatoires.")
+            st.error("⚠️ Les champs Nom de la mission, Entreprise cible et Axes du benchmark sont obligatoires.")
             st.stop()
 
         mission_config = {
@@ -522,6 +554,7 @@ with tab_mission:
             "concurrent_reference": concurrent_reference,
             "periode": periode,
             "mode": "Rapide" if "Rapide" in mode_analyse else "Approfondi",
+            "type": mission_type_sel,
             "sources": sources_cochees,
             "slides_optionnelles": slides_cochees,
         }
@@ -546,11 +579,20 @@ with tab_mission:
             try:
                 from agent import collector as col_m
                 articles_m = col_m.collect(sector_config_m, settings_m)
-                st.write(f"✅ **{len(articles_m)} articles collectés**")
+                st.write(f"✅ **{len(articles_m)} articles web collectés**")
             except Exception as e:
                 status_m.update(label="❌ Erreur collecte", state="error")
                 st.error(f"Erreur collecte : {e}")
                 st.stop()
+            # Enrichissement avec les PDFs Magazines
+            try:
+                from agent import pdf_collector as _pdf_col_m
+                _pdf_arts_m = _pdf_col_m.collect_pdfs(sector_config_m, settings_m)
+                if _pdf_arts_m:
+                    articles_m = articles_m + _pdf_arts_m
+                    st.caption(f"  📰 +{len(_pdf_arts_m)} PDF(s) Magazines ajoutés")
+            except Exception as _pe:
+                st.caption(f"  ⚠️ PDFs Magazines ignorés : {_pe}")
 
             st.write(f"🧠 **Étape 2/3** — Analyse Claude ({mission_config['mode']})…")
             _ph = st.empty()
@@ -624,6 +666,44 @@ with tab_mission:
                     mime="application/json",
                     use_container_width=True,
                 )
+
+        # ── Sources bibliographiques ─────────────────────────────────────────
+        import json as _json_src
+        try:
+            with open(res["json_path"], encoding="utf-8") as _jf:
+                _analysis_data = _json_src.load(_jf)
+            _sources = _analysis_data.get("index_sources", [])
+            if _sources:
+                with st.expander(f"📚 Sources bibliographiques ({len(_sources)} références)", expanded=False):
+                    _src_lines = []
+                    for _s in _sources:
+                        _sid = _s.get("id", "")
+                        _titre = _s.get("titre", "")
+                        _source = _s.get("source", "")
+                        _date = _s.get("date", "")
+                        _url = _s.get("url", "")
+                        _pert = _s.get("pertinence", "")
+                        _badge = "🔵" if _pert == "Directe" else "⚪"
+                        if _url and _url.startswith("http"):
+                            st.markdown(f"{_badge} **[{_sid}]** [{_titre}]({_url}) — *{_source}* {_date}")
+                        else:
+                            st.markdown(f"{_badge} **[{_sid}]** {_titre} — *{_source}* {_date}")
+                        _src_lines.append(
+                            f"[{_sid}] {_titre} — {_source} ({_date})"
+                            + (f"\n    {_url}" if _url and _url.startswith("http") else "")
+                            + f" [{_pert}]"
+                        )
+                    _src_md = "# Sources — " + res["ppt_name"].replace(".pptx", "") + "\n\n"
+                    _src_md += "\n\n".join(_src_lines)
+                    st.download_button(
+                        "⬇️ Télécharger la liste des sources (.md)",
+                        data=_src_md.encode("utf-8"),
+                        file_name=res["ppt_name"].replace(".pptx", "_sources.md"),
+                        mime="text/markdown",
+                        use_container_width=True,
+                    )
+        except Exception:
+            pass
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

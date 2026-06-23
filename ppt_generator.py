@@ -78,6 +78,21 @@ def _add_rect(slide, left, top, width, height, fill_color=None, line_color=None)
     return shape
 
 
+def _clean_slide_text(text: str) -> str:
+    """Nettoie le texte avant affichage PPT : supprime marqueurs internes et citations."""
+    import re
+    # Marqueurs de certitude internes (jamais visibles dans un livrable client)
+    text = re.sub(r'\[confirm[eé]\]|\[probable\]|\[[àa]\s*v[eé]rifier\]', '', text, flags=re.IGNORECASE)
+    # Citations numériques [N] ou groupes [N][M]
+    text = re.sub(r'(\[\d+\])+', '', text)
+    # Espaces parasites avant ponctuation (après suppression des [N])
+    text = re.sub(r'\s+([.,;:!?])', r'\1', text)
+    # Doubles espaces et sauts de ligne excessifs
+    text = re.sub(r'  +', ' ', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def _add_textbox(slide, left, top, width, height, text, font_size=12, bold=False,
                  color=None, align=PP_ALIGN.LEFT, wrap=True):
     """Ajoute une zone de texte simple."""
@@ -157,6 +172,13 @@ def _content_slide(prs, titre, col_gauche_text, col_droite_text, so_what_text,
     │  Confidentiel — [mission] · LMS ORH      │
     └──────────────────────────────────────────┘
     """
+    # Nettoyage : supprime [confirmé]/[probable]/[à vérifier] et citations [N]
+    col_gauche_text = _clean_slide_text(col_gauche_text or "")
+    col_droite_text = _clean_slide_text(col_droite_text or "")
+    so_what_text    = _clean_slide_text(so_what_text or "")
+    if col_gauche_items:
+        col_gauche_items = [_clean_slide_text(i) for i in col_gauche_items]
+
     nom_mission = mission_config.get("nom_mission", "Mission")
     entreprise_cible = mission_config.get("entreprise_cible", "Entreprise")
 
@@ -307,9 +329,10 @@ def _slide_cover(prs, analysis, mission_config):
     _add_rect(slide, panneau_w, Cm(0), SLIDE_W - panneau_w, SLIDE_H, fill_color=BLANC)
 
     # Type de livrable (petite étiquette bordeaux)
+    _bench_type_label = mission_config.get("type", "RH").upper()
     _add_textbox(
         slide, right_x, Cm(1.5), right_w, Cm(0.7),
-        "BENCHMARK RH — MISSION CONSULTANT",
+        f"BENCHMARK {_bench_type_label} — MISSION CONSULTANT",
         font_size=10, bold=True, color=BORDEAUX,
     )
 
@@ -500,6 +523,97 @@ def _slide_signaux_innovation(prs, analysis, mission_config):
     )
 
 
+def _slide_modeles_csp(prs, analysis, mission_config):
+    """Slide 3 Org — Modèles CSP comparables."""
+    csp = analysis.get("modeles_csp", {})
+    structures = csp.get("structures_types", [])
+    col_g_items = [f"• {s}" for s in structures] if structures else None
+    droite = ""
+    if csp.get("gouvernance_observee"):
+        droite += f"Gouvernance observée :\n{csp['gouvernance_observee']}\n\n"
+    if csp.get("perimetre_fonctionnel"):
+        droite += f"Périmètre fonctionnel :\n{csp['perimetre_fonctionnel']}"
+    return _content_slide(
+        prs,
+        titre="Modèles CSP — Benchmark comparatif",
+        col_gauche_text=csp.get("analyse", ""),
+        col_droite_text=droite,
+        so_what_text=csp.get("so_what", ""),
+        mission_config=mission_config,
+        col_gauche_items=col_g_items,
+    )
+
+
+def _slide_processus_douaniers(prs, analysis, mission_config):
+    """Slide 4 Org — Processus douaniers & import/export."""
+    pd = analysis.get("processus_douaniers", {})
+    pratiques = pd.get("bonnes_pratiques", [])
+    col_g_items = [f"• {p}" for p in pratiques] if pratiques else None
+    outils = pd.get("outils_systemes", [])
+    risques = pd.get("risques_frequents", [])
+    droite = ""
+    if outils:
+        droite += "Outils & systèmes :\n" + "\n".join(f"• {o}" for o in outils[:4])
+    if risques:
+        droite += "\n\nRisques fréquents :\n" + "\n".join(f"• {r}" for r in risques[:3])
+    return _content_slide(
+        prs,
+        titre="Processus douaniers — Best practices",
+        col_gauche_text=pd.get("analyse", ""),
+        col_droite_text=droite,
+        so_what_text=pd.get("so_what", ""),
+        mission_config=mission_config,
+        col_gauche_items=col_g_items,
+    )
+
+
+def _slide_interface_filiale_siege(prs, analysis, mission_config):
+    """Slide 5 Org — Interface filiale/siège."""
+    iface = analysis.get("interface_filiale_siege", {})
+    return _content_slide(
+        prs,
+        titre="Interface Filiale / Siège",
+        col_gauche_text=iface.get("analyse", ""),
+        col_droite_text=(
+            f"Modèles de délégation :\n{iface.get('modeles_delegation', '')}\n\n"
+            f"Protocoles de validation :\n{iface.get('protocoles_validation', '')}\n\n"
+            f"Reporting :\n{iface.get('reporting_type', '')}"
+        ),
+        so_what_text=iface.get("so_what", ""),
+        mission_config=mission_config,
+    )
+
+
+def _slide_formalisation_audit(prs, analysis, mission_config):
+    """Slide 6 Org — Formalisation & Audit-readiness + signaux faibles."""
+    fau = analysis.get("formalisation_audit_readiness", {})
+    signaux = analysis.get("signaux_faibles", [])
+    referentiels = fau.get("referentiels_utilises", [])
+    criteres = fau.get("criteres_audit_groupe", [])
+    col_g_items = (
+        [f"Référentiel : {r}" for r in referentiels[:3]]
+        + [f"Critère audit : {c}" for c in criteres[:3]]
+    ) or None
+
+    signaux_text = ""
+    for s in signaux[:3]:
+        signaux_text += f"• {s.get('signal', '')} ({s.get('horizon', '')})\n"
+        impl = s.get("implication_organisationnelle") or s.get("implication_rh", "")
+        if impl:
+            signaux_text += f"  → {impl}\n\n"
+
+    return _content_slide(
+        prs,
+        titre="Formalisation & Audit-readiness",
+        col_gauche_text=fau.get("analyse", ""),
+        col_droite_text=signaux_text or fau.get("niveaux_maturite", ""),
+        so_what_text=fau.get("so_what", ""),
+        mission_config=mission_config,
+        col_gauche_items=col_g_items,
+        titre_droite="Signaux faibles & maturité",
+    )
+
+
 def _slide_recommandations(prs, analysis, mission_config):
     """Slide 7 — Recommandations Mission (3 blocs côte à côte)."""
     nom_mission = mission_config.get("nom_mission", "Mission")
@@ -648,13 +762,20 @@ def generate_lms_ppt(analysis: Dict[str, Any], mission_config: Dict, output_path
     # Remplacer la référence globale de layout dans les helpers
     # (les helpers utilisent prs.slide_layouts[6] directement)
 
-    # ── 7 slides fixes ────────────────────────────────────────────────────────
+    # ── Slides fixes (7 slides, axes selon le type de benchmark) ─────────────
+    _is_org = mission_config.get("type", "RH").upper() == "ORGANISATIONNEL"
     _slide_cover(prs, analysis, mission_config)
     _slide_contexte(prs, analysis, mission_config)
-    _slide_business_model(prs, analysis, mission_config)
-    _slide_organisation(prs, analysis, mission_config)
-    _slide_gouvernance(prs, analysis, mission_config)
-    _slide_signaux_innovation(prs, analysis, mission_config)
+    if _is_org:
+        _slide_modeles_csp(prs, analysis, mission_config)
+        _slide_processus_douaniers(prs, analysis, mission_config)
+        _slide_interface_filiale_siege(prs, analysis, mission_config)
+        _slide_formalisation_audit(prs, analysis, mission_config)
+    else:
+        _slide_business_model(prs, analysis, mission_config)
+        _slide_organisation(prs, analysis, mission_config)
+        _slide_gouvernance(prs, analysis, mission_config)
+        _slide_signaux_innovation(prs, analysis, mission_config)
     _slide_recommandations(prs, analysis, mission_config)
 
     # ── Slides optionnelles ───────────────────────────────────────────────────

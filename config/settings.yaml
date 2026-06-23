@@ -16,7 +16,7 @@ collection:
   pdf_max_docs: 25          # Nb de PDFs RÉELLEMENT injectés par run — ⚠️ principal levier de coût tokens
 analysis:
   provider: anthropic               # anthropic | gemini | groq (Anthropic = qualité max)
-  model: claude-opus-4-8            # Modèle Anthropic (si provider=anthropic) — Sonnet 4.6 = ~2x moins cher pour étirer le crédit
+  model: claude-sonnet-4-6          # Modèle Anthropic — Sonnet 4.6 : ~5x moins cher qu'Opus (~0.10-0.50$/benchmark vs 3-5$/benchmark)
   gemini_model: gemini-2.5-pro      # Modèle Gemini (repli gratuit si provider=gemini)
   gemini_max_tokens: 4096           # Limite sortie Gemini (free tier plus restrictif)
   gemini_max_articles: 12           # Nb articles max envoyés à Gemini (prompt plus court)
