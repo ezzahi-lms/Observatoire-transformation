@@ -263,6 +263,7 @@ with tab_analyse:
         )
 
         run_btn = st.button("▶ Lancer l'analyse", type="primary", use_container_width=True)
+        brief_btn = st.button("🗞️ Brève quotidienne (rapide · 1 appel LLM)", use_container_width=True)
 
     with col_info:
         if selected in sectors:
@@ -350,6 +351,10 @@ with tab_analyse:
             status.update(label="✅ Analyse terminée avec succès !", state="complete")
 
         st.success(f"Rapports générés le {datetime.now().strftime('%d/%m/%Y à %H:%M')}")
+        st.session_state["last_benchmark"] = {
+            "id": f"benchmark_{selected}_{datetime.now().strftime('%Y%m%d_%H%M')}",
+            "sector": sectors[selected]["label"],
+        }
         mime_map = {
             ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             ".html": "text/html",
@@ -369,6 +374,55 @@ with tab_analyse:
                 mime=mime_map.get(p.suffix, "application/octet-stream"),
                 use_container_width=True,
             )
+
+    # ── Brève quotidienne (Phase 3) — opt-in, 1 appel LLM ─────────────────────
+    if brief_btn:
+        _bcfg = {**sectors[selected], "key": selected}
+        _bset = load_settings()
+        with st.status("⏳ Génération de la brève…", expanded=True) as bstatus:
+            try:
+                from agent import collector as col_module
+                _arts = col_module.collect(_bcfg, _bset)
+                st.write(f"✅ {len(_arts)} sources collectées")
+                from agent import brief as brief_module
+                _brief = brief_module.generate_brief(_bcfg, _arts, _bset)
+                st.session_state["last_brief"] = {
+                    "md": brief_module.render_brief_md(_brief),
+                    "sector": _bcfg["label"],
+                    "id": f"breve_{selected}_{datetime.now().strftime('%Y%m%d_%H%M')}",
+                }
+                bstatus.update(label="✅ Brève générée", state="complete")
+            except Exception as e:
+                bstatus.update(label="❌ Erreur brève", state="error")
+                st.error(f"Erreur lors de la génération de la brève : {e}")
+
+    def _feedback_widget(item_id, sector, livrable, key_prefix):
+        """Boutons de feedback à friction zéro (Phase 4)."""
+        from agent import feedback_log as fbl
+        _rdir = settings.get("reporting", {}).get("output_dir", "reports")
+        st.caption("Ce livrable vous a-t-il été utile ?")
+        _c1, _c2, _c3 = st.columns(3)
+        if _c1.button("👍 OK", key=f"{key_prefix}_ok", use_container_width=True):
+            fbl.log_feedback(_rdir, item_id, "ok", sector=sector, livrable=livrable); st.toast("Merci, noté 👍")
+        if _c2.button("😐 Mitigé", key=f"{key_prefix}_mit", use_container_width=True):
+            fbl.log_feedback(_rdir, item_id, "mitige", sector=sector, livrable=livrable); st.toast("Noté 😐")
+        if _c3.button("🗑️ À jeter", key=f"{key_prefix}_jet", use_container_width=True):
+            fbl.log_feedback(_rdir, item_id, "jeter", sector=sector, livrable=livrable); st.toast("Noté 🗑️")
+
+    _lb = st.session_state.get("last_brief")
+    if _lb:
+        st.markdown("---")
+        st.markdown("### 🗞️ Dernière brève quotidienne")
+        st.markdown(_lb["md"])
+        st.download_button("📥 Télécharger la brève (.md)", data=_lb["md"],
+                           file_name=_lb["id"] + ".md", mime="text/markdown")
+        _feedback_widget(_lb["id"], _lb["sector"], "breve", key_prefix="fb_brief")
+
+    _bm = st.session_state.get("last_benchmark")
+    if _bm:
+        st.markdown("---")
+        st.markdown(f"### 📊 Feedback — dernier benchmark · {_bm['sector']}")
+        _feedback_widget(_bm["id"], _bm["sector"], "benchmark", key_prefix="fb_bench")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
