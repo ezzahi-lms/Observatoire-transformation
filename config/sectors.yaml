@@ -422,6 +422,65 @@ sectors:
       - "Dimension Afrique & MENA : nearshoring vers Maroc, benchmarks industriels Afrique du Nord, opportunités transferts industriels vers Afrique subsaharienne"
       - "RSE & Transition : empreinte carbone, énergie renouvelable dans les process, conditions de travail, économie circulaire industrielle"
 
+  # ════════════════════════════════════════════════════════════════════════════
+  #  ENTREPRISES PUBLIQUES STRATÉGIQUES (EEP) — Maroc  [intégré de la V2 Zidane]
+  # ════════════════════════════════════════════════════════════════════════════
+  entreprises_publiques:
+    label: "Entreprises Publiques Stratégiques (EEP) — Maroc"
+    language: "fr"
+
+    search_queries:
+      - "réforme entreprises publiques Maroc loi 50.21 ANGSPE transformation"
+      - "OCP ONEE ONCF RAM transformation organisationnelle gouvernance 2026"
+      - "transformation digitale entreprises publiques Maroc EEP"
+      - "Cour des Comptes rapport entreprises publiques Maroc gouvernance"
+      - "internationalisation Afrique champions publics marocains OCP"
+      - "transition énergétique MASEN ONEE Maroc organisation"
+      - "gouvernance établissements publics Maroc ANGSPE restructuration"
+      - "dimensionnement effectifs entreprises publiques Maroc performance"
+      - "public enterprises Morocco reform state-owned governance transformation"
+      - "CDG Marsa Maroc ADM Barid Al-Maghrib transformation organisation"
+
+    rss_feeds:
+      - url: "https://medias24.com/rss"
+        name: "Medias24 Maroc"
+      - url: "https://www.challenge.ma/feed"
+        name: "Challenge — Business Maroc"
+      - url: "https://www.agenceecofin.com/feed"
+        name: "Agence Ecofin — Afrique"
+      - url: "https://telquel.ma/feed"
+        name: "TelQuel — Économie Maroc"
+
+    context_note: >
+      Les Entreprises et Établissements Publics (EEP) marocains forment un noyau stratégique :
+      OCP, ONEE, ONCF, RAM, ANP, ADM, Barid Al-Maghrib, CDG, ANCFCC, Marsa Maroc, MASEN,
+      Al Mada (groupe d'intérêt stratégique). La réforme structurante est la loi 50.21 sur la
+      gouvernance des EEP, pilotée par l'ANGSPE (Agence Nationale de Gestion Stratégique des
+      Participations de l'État). La Cour des Comptes constitue la source institutionnelle de
+      contrôle de référence. Thèmes 2026 : mise en œuvre de la loi 50.21, transformation digitale
+      des grands EEP, internationalisation Afrique des champions (OCP, ONEE, banques publiques),
+      transition énergétique. Enjeux organisationnels : professionnalisation de la gouvernance,
+      contractualisation État-EEP, optimisation des effectifs et de la masse salariale, pilotage
+      de la performance, restructuration des portefeuilles de participations.
+      Questions clients LMS ORH : comment décliner la loi 50.21 dans la gouvernance d'un EEP ?
+      Quel modèle de contractualisation avec l'État ? Comment dimensionner et professionnaliser
+      les fonctions support ? Quelle gouvernance pour les filiales africaines des champions publics ?
+      FOCUS : transformations organisationnelles uniquement (gouvernance, structures, RH, SI, performance).
+
+    benchmark_axes:
+      - "FCS Stratégique : mise en œuvre loi 50.21, contractualisation État-EEP, repositionnement des portefeuilles de participations, stratégie Afrique des champions publics"
+      - "FCS Organisationnel : professionnalisation de la gouvernance, structures de pilotage ANGSPE, restructuration des filiales, séparation des fonctions régulation/exploitation"
+      - "FCS Opérationnel : efficience opérationnelle des grands opérateurs publics, qualité de service public, gestion des grands projets d'infrastructure"
+      - "FCS Technologique : transformation digitale des EEP, SI de pilotage de la performance, dématérialisation des services publics, cybersécurité des infrastructures critiques"
+      - "FCS Humain & RH : optimisation de la masse salariale, dépolitisation/professionnalisation du management, attraction de talents vs secteur privé, gestion des statuts"
+      - "Dimensionnement : ratio encadrement, optimisation des effectifs publics, évolution des fonctions support, mutualisation entre EEP"
+      - "Gouvernance : déclinaison loi 50.21, rôle de l'ANGSPE, conseils d'administration, contractualisation pluriannuelle, reporting à la Cour des Comptes, conformité ESG"
+      - "Externalisation & Partenariats : PPP, concessions, externalisation de fonctions support, partenariats public-privé pour l'infrastructure"
+      - "Systèmes d'Information : SI de pilotage des participations, dématérialisation, interopérabilité inter-administrations, données ouvertes (open data)"
+      - "Gestion de la performance : contrats-programmes État-EEP, KPIs de service public, équilibre mission publique / rentabilité, évaluation des dirigeants"
+      - "Dimension Afrique & MENA : internationalisation des champions publics (OCP en Afrique, ONEE, RAM), coopération Sud-Sud, benchmarks de gouvernance des EEP régionaux"
+      - "RSE & Service Public : accès universel aux services essentiels, transition énergétique, impact territorial, transparence et redevabilité"
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  SOLUTION 3 — CONFIGURATION RAPPORTS INNOVATION
