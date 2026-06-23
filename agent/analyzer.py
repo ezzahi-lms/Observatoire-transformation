@@ -918,6 +918,19 @@ def analyze(sector_config: Dict, articles: List[Dict], settings: Dict,
         "freshness": freshness,
     }
 
+    # ── Contrôle qualité (QA gate) — 100 % code, aucun coût token ──────────────
+    try:
+        from agent.qa_gate import run_qa, save_quarantine
+        result["_qa"] = run_qa(result, articles, settings)
+        if result["_qa"]["status"] == "quarantaine":
+            save_quarantine(result, sector_label, reports_dir)
+            logger.warning(
+                f"⚠️ Benchmark {sector_label} en quarantaine (score {result['_qa']['score']}/100) — "
+                "relecture recommandée avant diffusion."
+            )
+    except Exception as e:
+        logger.warning(f"QA gate non exécuté : {e}")
+
     # ── Nettoyage des tmp ─────────────────────────────────────────────────────
     _clear_tmp([tmp_a, tmp_b, tmp_c])
 
