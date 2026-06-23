@@ -752,7 +752,7 @@ def _call_anthropic(client, model: str, max_tokens: int, system_text: str,
         system=[{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}],
         tools=[tool],
         tool_choice={"type": "tool", "name": tool_name},
-        messages=[{"role": "user", "content": enriched_prompt}],
+        messages=[{"role": "user", "content": user_prompt}],
     )
     for block in resp.content:
         if block.type == "tool_use" and block.name == tool_name:
