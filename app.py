@@ -495,6 +495,22 @@ with tab_mission:
             placeholder="Ex : Nestlé Maroc, Danone, Label'Vie, SABIC…"
         )
 
+        # ── Noms des 4 axes (personnalisables) ───────────────────────────────
+        with st.expander("✏️ Personnaliser les titres des 4 slides d'analyse (optionnel)"):
+            if mission_type_sel == "Organisationnel":
+                _d1, _d2 = "Modèles CSP — Benchmark comparatif", "Processus douaniers — Best practices"
+                _d3, _d4 = "Interface Filiale / Siège", "Formalisation & Audit-readiness"
+            else:
+                _d1, _d2 = "Business Model — Lecture RH", "Organisation & Dimensionnement"
+                _d3, _d4 = "Gouvernance RH & Management", "Signaux faibles & Innovations RH"
+            _ax_cols = st.columns(2)
+            with _ax_cols[0]:
+                axe1 = st.text_input("Titre Axe 1", placeholder=_d1, key="axe1")
+                axe3 = st.text_input("Titre Axe 3", placeholder=_d3, key="axe3")
+            with _ax_cols[1]:
+                axe2 = st.text_input("Titre Axe 2", placeholder=_d2, key="axe2")
+                axe4 = st.text_input("Titre Axe 4", placeholder=_d4, key="axe4")
+
         st.markdown("**Sources prioritaires** (optionnel)")
         src_cols = st.columns(3)
         sources_cochees = []
@@ -557,6 +573,12 @@ with tab_mission:
             "type": mission_type_sel,
             "sources": sources_cochees,
             "slides_optionnelles": slides_cochees,
+            "axes_noms": {
+                "axe1": axe1.strip() if axe1.strip() else None,
+                "axe2": axe2.strip() if axe2.strip() else None,
+                "axe3": axe3.strip() if axe3.strip() else None,
+                "axe4": axe4.strip() if axe4.strip() else None,
+            },
         }
 
         # Réinitialiser les résultats précédents

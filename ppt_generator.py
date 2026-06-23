@@ -91,16 +91,28 @@ def _as_list(val) -> list:
 def _clean_slide_text(text: str) -> str:
     """Nettoie le texte avant affichage PPT : supprime marqueurs internes et citations."""
     import re
-    # Marqueurs de certitude internes (jamais visibles dans un livrable client)
+    if not isinstance(text, str):
+        return ""
     text = re.sub(r'\[confirm[eé]\]|\[probable\]|\[[àa]\s*v[eé]rifier\]', '', text, flags=re.IGNORECASE)
-    # Citations numériques [N] ou groupes [N][M]
     text = re.sub(r'(\[\d+\])+', '', text)
-    # Espaces parasites avant ponctuation (après suppression des [N])
     text = re.sub(r'\s+([.,;:!?])', r'\1', text)
-    # Doubles espaces et sauts de ligne excessifs
     text = re.sub(r'  +', ' ', text)
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
+
+
+def _short(text: str, max_chars: int = 500) -> str:
+    """Tronque le texte à la dernière phrase complète avant max_chars."""
+    text = _clean_slide_text(text)
+    if len(text) <= max_chars:
+        return text
+    cut = text[:max_chars]
+    # Couper à la dernière phrase complète
+    for sep in ('. ', '.\n', ' — ', ' : '):
+        idx = cut.rfind(sep)
+        if idx > max_chars // 2:
+            return cut[:idx + 1]
+    return cut.rstrip() + "…"
 
 
 def _add_textbox(slide, left, top, width, height, text, font_size=12, bold=False,
@@ -182,10 +194,10 @@ def _content_slide(prs, titre, col_gauche_text, col_droite_text, so_what_text,
     │  Confidentiel — [mission] · LMS ORH      │
     └──────────────────────────────────────────┘
     """
-    # Nettoyage : supprime [confirmé]/[probable]/[à vérifier] et citations [N]
-    col_gauche_text = _clean_slide_text(col_gauche_text or "")
-    col_droite_text = _clean_slide_text(col_droite_text or "")
-    so_what_text    = _clean_slide_text(so_what_text or "")
+    # Nettoyage + troncature pour densité PPT acceptable
+    col_gauche_text = _short(col_gauche_text or "", max_chars=520)
+    col_droite_text = _short(col_droite_text or "", max_chars=420)
+    so_what_text    = _short(so_what_text or "",    max_chars=300)
     if col_gauche_items:
         col_gauche_items = [_clean_slide_text(i) for i in col_gauche_items]
 
@@ -438,8 +450,9 @@ def _slide_contexte(prs, analysis, mission_config):
     )
 
 
-def _slide_business_model(prs, analysis, mission_config):
+def _slide_business_model(prs, analysis, mission_config, titre=None):
     """Slide 3 — Business Model — Lecture RH."""
+    titre = titre or "Business Model — Lecture RH"
     bm = _as_dict(analysis.get("business_model_rh"))
     analyse = bm.get("analyse", "")
     emergentes = _as_list(bm.get("competences_emergentes"))
@@ -462,7 +475,7 @@ def _slide_business_model(prs, analysis, mission_config):
 
     return _content_slide(
         prs,
-        titre="Business Model — Lecture RH",
+        titre=titre,
         col_gauche_text=analyse,
         col_droite_text=droite,
         so_what_text=so_what,
@@ -471,12 +484,12 @@ def _slide_business_model(prs, analysis, mission_config):
     )
 
 
-def _slide_organisation(prs, analysis, mission_config):
+def _slide_organisation(prs, analysis, mission_config, titre=None):
     """Slide 4 — Organisation & Dimensionnement."""
     org = _as_dict(analysis.get("organisation_dimensionnement"))
     return _content_slide(
         prs,
-        titre="Organisation & Dimensionnement",
+        titre=titre or "Organisation & Dimensionnement",
         col_gauche_text=org.get("analyse", ""),
         col_droite_text=(
             f"Tendances effectifs :\n{org.get('tendances_effectifs', '')}\n\n"
@@ -488,24 +501,28 @@ def _slide_organisation(prs, analysis, mission_config):
     )
 
 
-def _slide_gouvernance(prs, analysis, mission_config):
+def _slide_gouvernance(prs, analysis, mission_config, titre=None):
     """Slide 5 — Gouvernance RH & Management."""
     gov = _as_dict(analysis.get("gouvernance_rh"))
+    instances   = gov.get("instances_rh", "")
+    politiques  = gov.get("politiques_sociales", "")
+    conformite  = gov.get("conformite", "")
+    droite_parts = []
+    if instances:   droite_parts.append(f"Instances RH :\n{instances}")
+    if politiques:  droite_parts.append(f"Politiques sociales :\n{politiques}")
+    if conformite:  droite_parts.append(f"Conformité :\n{conformite}")
+    droite = "\n\n".join(droite_parts) or gov.get("analyse", "")
     return _content_slide(
         prs,
-        titre="Gouvernance RH & Management",
+        titre=titre or "Gouvernance RH & Management",
         col_gauche_text=gov.get("analyse", ""),
-        col_droite_text=(
-            f"Instances RH :\n{gov.get('instances_rh', '')}\n\n"
-            f"Politiques sociales :\n{gov.get('politiques_sociales', '')}\n\n"
-            f"Conformité :\n{gov.get('conformite', '')}"
-        ),
+        col_droite_text=droite,
         so_what_text=gov.get("so_what", ""),
         mission_config=mission_config,
     )
 
 
-def _slide_signaux_innovation(prs, analysis, mission_config):
+def _slide_signaux_innovation(prs, analysis, mission_config, titre=None):
     """Slide 6 — Signaux faibles & Innovations RH."""
     inn = _as_dict(analysis.get("innovation_manageriale"))
     signaux = _as_list(analysis.get("signaux_faibles"))
@@ -526,7 +543,7 @@ def _slide_signaux_innovation(prs, analysis, mission_config):
 
     return _content_slide(
         prs,
-        titre="Signaux faibles & Innovations RH",
+        titre=titre or "Signaux faibles & Innovations RH",
         col_gauche_text=signaux_text or inn.get("analyse", ""),
         col_droite_text=droite or inn.get("experience_employe", ""),
         so_what_text=inn.get("so_what", ""),
@@ -534,7 +551,7 @@ def _slide_signaux_innovation(prs, analysis, mission_config):
     )
 
 
-def _slide_modeles_csp(prs, analysis, mission_config):
+def _slide_modeles_csp(prs, analysis, mission_config, titre=None):
     """Slide 3 Org — Modèles CSP comparables."""
     csp = _as_dict(analysis.get("modeles_csp"))
     structures = _as_list(csp.get("structures_types"))
@@ -546,7 +563,7 @@ def _slide_modeles_csp(prs, analysis, mission_config):
         droite += f"Périmètre fonctionnel :\n{csp['perimetre_fonctionnel']}"
     return _content_slide(
         prs,
-        titre="Modèles CSP — Benchmark comparatif",
+        titre=titre or "Modèles CSP — Benchmark comparatif",
         col_gauche_text=csp.get("analyse", ""),
         col_droite_text=droite,
         so_what_text=csp.get("so_what", ""),
@@ -555,7 +572,7 @@ def _slide_modeles_csp(prs, analysis, mission_config):
     )
 
 
-def _slide_processus_douaniers(prs, analysis, mission_config):
+def _slide_processus_douaniers(prs, analysis, mission_config, titre=None):
     """Slide 4 Org — Processus douaniers & import/export."""
     pd = _as_dict(analysis.get("processus_douaniers"))
     pratiques = _as_list(pd.get("bonnes_pratiques"))
@@ -569,7 +586,7 @@ def _slide_processus_douaniers(prs, analysis, mission_config):
         droite += "\n\nRisques fréquents :\n" + "\n".join(f"• {r}" for r in risques[:3])
     return _content_slide(
         prs,
-        titre="Processus douaniers — Best practices",
+        titre=titre or "Processus douaniers — Best practices",
         col_gauche_text=pd.get("analyse", ""),
         col_droite_text=droite,
         so_what_text=pd.get("so_what", ""),
@@ -578,12 +595,12 @@ def _slide_processus_douaniers(prs, analysis, mission_config):
     )
 
 
-def _slide_interface_filiale_siege(prs, analysis, mission_config):
+def _slide_interface_filiale_siege(prs, analysis, mission_config, titre=None):
     """Slide 5 Org — Interface filiale/siège."""
     iface = _as_dict(analysis.get("interface_filiale_siege"))
     return _content_slide(
         prs,
-        titre="Interface Filiale / Siège",
+        titre=titre or "Interface Filiale / Siège",
         col_gauche_text=iface.get("analyse", ""),
         col_droite_text=(
             f"Modèles de délégation :\n{iface.get('modeles_delegation', '')}\n\n"
@@ -595,7 +612,7 @@ def _slide_interface_filiale_siege(prs, analysis, mission_config):
     )
 
 
-def _slide_formalisation_audit(prs, analysis, mission_config):
+def _slide_formalisation_audit(prs, analysis, mission_config, titre=None):
     """Slide 6 Org — Formalisation & Audit-readiness + signaux faibles."""
     fau = _as_dict(analysis.get("formalisation_audit_readiness"))
     signaux = _as_list(analysis.get("signaux_faibles"))
@@ -616,7 +633,7 @@ def _slide_formalisation_audit(prs, analysis, mission_config):
 
     return _content_slide(
         prs,
-        titre="Formalisation & Audit-readiness",
+        titre=titre or "Formalisation & Audit-readiness",
         col_gauche_text=fau.get("analyse", ""),
         col_droite_text=signaux_text or fau.get("niveaux_maturite", ""),
         so_what_text=fau.get("so_what", ""),
@@ -668,22 +685,22 @@ def _slide_recommandations(prs, analysis, mission_config):
             f"RECOMMANDATION {i+1}", font_size=8, bold=True, color=BORDEAUX,
         )
 
-        # Titre de la reco (bordeaux)
-        action = rec.get("action", f"Recommandation {i+1}")
+        # Titre de la reco
+        action = _short(rec.get("action", f"Recommandation {i+1}"), max_chars=160)
         _add_textbox(
             slide, left + Cm(0.35), bloc_top + Cm(0.75), bloc_w - Cm(0.5), Cm(1.8),
             action, font_size=11, bold=True, color=GRIS_FONCE,
         )
 
         # Justification
-        justif = rec.get("justification", "")
+        justif = _short(rec.get("justification", ""), max_chars=380)
         _add_textbox(
             slide, left + Cm(0.35), bloc_top + Cm(2.6), bloc_w - Cm(0.5), Cm(4.5),
             justif, font_size=9, color=GRIS_FONCE,
         )
 
         # Priorité
-        priorite = rec.get("priorite", "Moyenne")
+        priorite = _clean_slide_text(rec.get("priorite", "Moyenne"))
         p_color = priorite_colors.get(priorite, GRIS_FONCE)
         _add_textbox(
             slide, left + Cm(0.35), bloc_top + Cm(7.3), bloc_w - Cm(0.5), Cm(0.65),
@@ -691,14 +708,14 @@ def _slide_recommandations(prs, analysis, mission_config):
         )
 
         # KPI
-        kpi = rec.get("kpi", "")
+        kpi = _short(rec.get("kpi", ""), max_chars=200)
         _add_textbox(
             slide, left + Cm(0.35), bloc_top + Cm(8.1), bloc_w - Cm(0.5), Cm(2.0),
             f"KPI : {kpi}", font_size=9, color=VERT_KPI,
         )
 
         # Horizon
-        horizon = rec.get("horizon", "")
+        horizon = _clean_slide_text(rec.get("horizon", ""))
         _add_textbox(
             slide, left + Cm(0.35), bloc_top + bloc_h - Cm(1.1), bloc_w - Cm(0.5), Cm(0.8),
             f"Horizon : {horizon}", font_size=9, bold=False, color=GRIS_FONCE,
@@ -775,20 +792,33 @@ def generate_lms_ppt(analysis: Dict[str, Any], mission_config: Dict, output_path
     # Remplacer la référence globale de layout dans les helpers
     # (les helpers utilisent prs.slide_layouts[6] directement)
 
-    # ── Slides fixes (7 slides, axes selon le type de benchmark) ─────────────
+    # ── Noms d'axes : personnalisés ou defaults selon le type ────────────────
     _is_org = mission_config.get("type", "RH").upper() == "ORGANISATIONNEL"
+    _axes = mission_config.get("axes_noms") or {}
+    if _is_org:
+        _t1 = _axes.get("axe1") or "Modèles CSP — Benchmark comparatif"
+        _t2 = _axes.get("axe2") or "Processus douaniers — Best practices"
+        _t3 = _axes.get("axe3") or "Interface Filiale / Siège"
+        _t4 = _axes.get("axe4") or "Formalisation & Audit-readiness"
+    else:
+        _t1 = _axes.get("axe1") or "Business Model — Lecture RH"
+        _t2 = _axes.get("axe2") or "Organisation & Dimensionnement"
+        _t3 = _axes.get("axe3") or "Gouvernance RH & Management"
+        _t4 = _axes.get("axe4") or "Signaux faibles & Innovations RH"
+
+    # ── Slides fixes ─────────────────────────────────────────────────────────
     _slide_cover(prs, analysis, mission_config)
     _slide_contexte(prs, analysis, mission_config)
     if _is_org:
-        _slide_modeles_csp(prs, analysis, mission_config)
-        _slide_processus_douaniers(prs, analysis, mission_config)
-        _slide_interface_filiale_siege(prs, analysis, mission_config)
-        _slide_formalisation_audit(prs, analysis, mission_config)
+        _slide_modeles_csp(prs, analysis, mission_config, titre=_t1)
+        _slide_processus_douaniers(prs, analysis, mission_config, titre=_t2)
+        _slide_interface_filiale_siege(prs, analysis, mission_config, titre=_t3)
+        _slide_formalisation_audit(prs, analysis, mission_config, titre=_t4)
     else:
-        _slide_business_model(prs, analysis, mission_config)
-        _slide_organisation(prs, analysis, mission_config)
-        _slide_gouvernance(prs, analysis, mission_config)
-        _slide_signaux_innovation(prs, analysis, mission_config)
+        _slide_business_model(prs, analysis, mission_config, titre=_t1)
+        _slide_organisation(prs, analysis, mission_config, titre=_t2)
+        _slide_gouvernance(prs, analysis, mission_config, titre=_t3)
+        _slide_signaux_innovation(prs, analysis, mission_config, titre=_t4)
     _slide_recommandations(prs, analysis, mission_config)
 
     # ── Slides optionnelles ───────────────────────────────────────────────────
