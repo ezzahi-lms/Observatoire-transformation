@@ -78,6 +78,16 @@ def _add_rect(slide, left, top, width, height, fill_color=None, line_color=None)
     return shape
 
 
+def _as_dict(val) -> dict:
+    """Retourne val si c'est un dict, sinon {} — protège contre un LLM qui renvoie une string."""
+    return val if isinstance(val, dict) else {}
+
+
+def _as_list(val) -> list:
+    """Retourne val si c'est une list, sinon [] — protège contre un LLM qui renvoie autre chose."""
+    return val if isinstance(val, list) else []
+
+
 def _clean_slide_text(text: str) -> str:
     """Nettoie le texte avant affichage PPT : supprime marqueurs internes et citations."""
     import re
@@ -430,10 +440,10 @@ def _slide_contexte(prs, analysis, mission_config):
 
 def _slide_business_model(prs, analysis, mission_config):
     """Slide 3 — Business Model — Lecture RH."""
-    bm = analysis.get("business_model_rh", {})
+    bm = _as_dict(analysis.get("business_model_rh"))
     analyse = bm.get("analyse", "")
-    emergentes = bm.get("competences_emergentes", [])
-    obsoletes = bm.get("competences_obsoletes", [])
+    emergentes = _as_list(bm.get("competences_emergentes"))
+    obsoletes = _as_list(bm.get("competences_obsoletes"))
     so_what = bm.get("so_what", "")
 
     col_g = analyse
@@ -463,7 +473,7 @@ def _slide_business_model(prs, analysis, mission_config):
 
 def _slide_organisation(prs, analysis, mission_config):
     """Slide 4 — Organisation & Dimensionnement."""
-    org = analysis.get("organisation_dimensionnement", {})
+    org = _as_dict(analysis.get("organisation_dimensionnement"))
     return _content_slide(
         prs,
         titre="Organisation & Dimensionnement",
@@ -474,13 +484,13 @@ def _slide_organisation(prs, analysis, mission_config):
         ),
         so_what_text=org.get("so_what", ""),
         mission_config=mission_config,
-        col_gauche_items=[f"• {r}" for r in org.get("nouveaux_roles", [])] or None,
+        col_gauche_items=[f"• {r}" for r in _as_list(org.get("nouveaux_roles"))] or None,
     )
 
 
 def _slide_gouvernance(prs, analysis, mission_config):
     """Slide 5 — Gouvernance RH & Management."""
-    gov = analysis.get("gouvernance_rh", {})
+    gov = _as_dict(analysis.get("gouvernance_rh"))
     return _content_slide(
         prs,
         titre="Gouvernance RH & Management",
@@ -497,16 +507,17 @@ def _slide_gouvernance(prs, analysis, mission_config):
 
 def _slide_signaux_innovation(prs, analysis, mission_config):
     """Slide 6 — Signaux faibles & Innovations RH."""
-    inn = analysis.get("innovation_manageriale", {})
-    signaux = analysis.get("signaux_faibles", [])
+    inn = _as_dict(analysis.get("innovation_manageriale"))
+    signaux = _as_list(analysis.get("signaux_faibles"))
 
     signaux_text = ""
-    for s in signaux[:3]:
+    for s in _as_list(signaux)[:3]:
+        s = _as_dict(s)
         signaux_text += f"• {s.get('signal', '')} ({s.get('horizon', '')})\n"
         signaux_text += f"  → {s.get('implication_rh', '')}\n\n"
 
-    pratiques = inn.get("pratiques_differenciantes", [])
-    outils = inn.get("outils_rh", [])
+    pratiques = _as_list(inn.get("pratiques_differenciantes"))
+    outils = _as_list(inn.get("outils_rh"))
     droite = ""
     if pratiques:
         droite += "Pratiques différenciantes :\n" + "\n".join(f"• {p}" for p in pratiques[:4])
@@ -525,8 +536,8 @@ def _slide_signaux_innovation(prs, analysis, mission_config):
 
 def _slide_modeles_csp(prs, analysis, mission_config):
     """Slide 3 Org — Modèles CSP comparables."""
-    csp = analysis.get("modeles_csp", {})
-    structures = csp.get("structures_types", [])
+    csp = _as_dict(analysis.get("modeles_csp"))
+    structures = _as_list(csp.get("structures_types"))
     col_g_items = [f"• {s}" for s in structures] if structures else None
     droite = ""
     if csp.get("gouvernance_observee"):
@@ -546,11 +557,11 @@ def _slide_modeles_csp(prs, analysis, mission_config):
 
 def _slide_processus_douaniers(prs, analysis, mission_config):
     """Slide 4 Org — Processus douaniers & import/export."""
-    pd = analysis.get("processus_douaniers", {})
-    pratiques = pd.get("bonnes_pratiques", [])
+    pd = _as_dict(analysis.get("processus_douaniers"))
+    pratiques = _as_list(pd.get("bonnes_pratiques"))
     col_g_items = [f"• {p}" for p in pratiques] if pratiques else None
-    outils = pd.get("outils_systemes", [])
-    risques = pd.get("risques_frequents", [])
+    outils = _as_list(pd.get("outils_systemes"))
+    risques = _as_list(pd.get("risques_frequents"))
     droite = ""
     if outils:
         droite += "Outils & systèmes :\n" + "\n".join(f"• {o}" for o in outils[:4])
@@ -569,7 +580,7 @@ def _slide_processus_douaniers(prs, analysis, mission_config):
 
 def _slide_interface_filiale_siege(prs, analysis, mission_config):
     """Slide 5 Org — Interface filiale/siège."""
-    iface = analysis.get("interface_filiale_siege", {})
+    iface = _as_dict(analysis.get("interface_filiale_siege"))
     return _content_slide(
         prs,
         titre="Interface Filiale / Siège",
@@ -586,10 +597,10 @@ def _slide_interface_filiale_siege(prs, analysis, mission_config):
 
 def _slide_formalisation_audit(prs, analysis, mission_config):
     """Slide 6 Org — Formalisation & Audit-readiness + signaux faibles."""
-    fau = analysis.get("formalisation_audit_readiness", {})
-    signaux = analysis.get("signaux_faibles", [])
-    referentiels = fau.get("referentiels_utilises", [])
-    criteres = fau.get("criteres_audit_groupe", [])
+    fau = _as_dict(analysis.get("formalisation_audit_readiness"))
+    signaux = _as_list(analysis.get("signaux_faibles"))
+    referentiels = _as_list(fau.get("referentiels_utilises"))
+    criteres = _as_list(fau.get("criteres_audit_groupe"))
     col_g_items = (
         [f"Référentiel : {r}" for r in referentiels[:3]]
         + [f"Critère audit : {c}" for c in criteres[:3]]
@@ -597,6 +608,7 @@ def _slide_formalisation_audit(prs, analysis, mission_config):
 
     signaux_text = ""
     for s in signaux[:3]:
+        s = _as_dict(s)
         signaux_text += f"• {s.get('signal', '')} ({s.get('horizon', '')})\n"
         impl = s.get("implication_organisationnelle") or s.get("implication_rh", "")
         if impl:
@@ -618,7 +630,7 @@ def _slide_recommandations(prs, analysis, mission_config):
     """Slide 7 — Recommandations Mission (3 blocs côte à côte)."""
     nom_mission = mission_config.get("nom_mission", "Mission")
     entreprise_cible = mission_config.get("entreprise_cible", "Entreprise")
-    recs = analysis.get("recommandations_mission", [])
+    recs = _as_list(analysis.get("recommandations_mission"))
 
     slide_layout = prs.slide_layouts[6]
     slide = prs.slides.add_slide(slide_layout)
@@ -643,6 +655,7 @@ def _slide_recommandations(prs, analysis, mission_config):
     priorite_colors = {"Haute": BORDEAUX, "Moyenne": RGBColor(230, 126, 34), "Faible": GRIS_FONCE}
 
     for i, rec in enumerate(recs[:3]):
+        rec = _as_dict(rec)
         left = Cm(0.5) + i * (bloc_w + gap)
 
         # Fond gris clair + bordure bordeaux gauche du bloc
