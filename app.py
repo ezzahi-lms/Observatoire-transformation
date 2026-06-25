@@ -1595,24 +1595,19 @@ with tab_config:
         st.subheader("🧠 Analyse")
 
         provider_options = ["anthropic", "gemini", "groq"]
-        current_provider = settings.get("analysis", {}).get("provider", "anthropic")
+        # La variable d'env (Secrets Streamlit) indique le fournisseur actif ;
+        # on l'utilise comme valeur initiale du sélecteur.
+        _active_provider = (os.environ.get("LLM_PROVIDER") or settings.get("analysis", {}).get("provider", "anthropic")).lower()
         provider = st.selectbox(
             "Fournisseur LLM",
             options=provider_options,
-            index=provider_options.index(current_provider) if current_provider in provider_options else 0,
+            index=provider_options.index(_active_provider) if _active_provider in provider_options else 0,
             format_func=lambda p: {
                 "anthropic": "Anthropic (Claude)",
                 "gemini": "Google Gemini",
                 "groq": "Groq (Llama)",
             }.get(p, p),
         )
-        _env_provider = os.environ.get("LLM_PROVIDER")
-        if _env_provider:
-            st.warning(
-                f"⚠️ La variable d'environnement `LLM_PROVIDER = {_env_provider}` est définie "
-                "et **prime sur ce choix**. Supprimez-la dans les Secrets Streamlit pour piloter "
-                "le fournisseur depuis cette page."
-            )
         st.caption("Anthropic (Claude) recommandé pour la qualité des analyses.")
 
         model_options = ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]
@@ -1650,6 +1645,7 @@ with tab_config:
     st.markdown("---")
     if st.button("💾 Enregistrer les paramètres", type="primary"):
         settings["analysis"]["provider"] = provider
+        os.environ["LLM_PROVIDER"] = provider  # prend effet immédiatement dans la session
         settings["analysis"]["model"] = model
         settings["analysis"]["max_tokens"] = int(max_tokens)
         settings["collection"]["days_back"] = int(days_back)
