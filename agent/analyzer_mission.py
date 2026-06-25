@@ -70,7 +70,19 @@ RÈGLES ABSOLUES — NON NÉGOCIABLES :
 7. Champ "analyse" : 3-4 phrases MAX — format PPT consultant, pas un article de fond. Chaque phrase = 1 fait + 1 implication.
 8. INTERDIT dans les champs texte : NE PAS écrire [confirmé], [probable] ou [à vérifier] — ce sont des notes internes, jamais dans le texte livrable.
 9. Les chiffres macro-économiques généraux (PIB, inflation, taux directeur) ne doivent apparaître QUE dans le slide Contexte — pas répétés dans chaque axe.
-10. Langue : français, registre consultant senior"""
+10. Langue : français, registre consultant senior
+
+RÉFÉRENCES ET VOCABULAIRE OBLIGATOIRES (mode Organisationnel) :
+Standards SSC internationaux à citer : Deloitte SSC Handbook, PwC SSC Excellence Framework, IMA (Institute of Management Accountants), SSON (Shared Services & Outsourcing Network) — au moins 1 de ces référentiels par axe.
+Vocabulaire douanier marocain à utiliser : ADII, BADR, PortNet, guichet unique, DUM (Déclaration Unique des Marchandises), DS (Déclaration Sommaire), codes HS à 10 chiffres, circuits vert/orange/rouge, régimes économiques, OEA (Opérateur Économique Agréé), commissionnaire agréé en douane.
+Modèles de maturité SSC : fix-lift-drop, RACI, SLA, GBS (Global Business Services).
+
+KPIs DOUANIERS SECTORIELS — à inclure dans kpis_sectoriels de chaque axe :
+Exemples : taux déclarations sans rectification (benchmark world-class : >95%), délai moyen mainlevée (benchmark : <48h circuit vert), taux dossiers circuit vert (leaders : >80%), nombre incidents/an (amendes, redressements), coût total process douanier rapporté au volume importé/exporté.
+
+GRILLE DE MATURITÉ SSC — pour le champ grille_maturite de formalisation_audit_readiness :
+6 axes OBLIGATOIRES : (1) Stratégie & portée, (2) Processus & standardisation, (3) Organisation & gouvernance, (4) Technologie & data, (5) Compétences & culture, (6) Performance & contrôle interne.
+Pour chaque axe : description du niveau world-class observé chez les meilleurs SSC."""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -355,8 +367,13 @@ TOOL_MISSION_ORG_RAPIDE = {
                     "gouvernance_observee": {"type": "string"},
                     "perimetre_fonctionnel": {"type": "string"},
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
                 },
-                "required": ["analyse", "structures_types", "gouvernance_observee", "perimetre_fonctionnel", "so_what"],
+                "required": ["analyse", "structures_types", "gouvernance_observee", "perimetre_fonctionnel", "so_what", "kpis_sectoriels"],
             },
             "processus_douaniers": {
                 "type": "object",
@@ -375,8 +392,13 @@ TOOL_MISSION_ORG_RAPIDE = {
                         "description": "Risques opérationnels douaniers les plus fréquents",
                     },
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
                 },
-                "required": ["analyse", "bonnes_pratiques", "outils_systemes", "risques_frequents", "so_what"],
+                "required": ["analyse", "bonnes_pratiques", "outils_systemes", "risques_frequents", "so_what", "kpis_sectoriels"],
             },
             "interface_filiale_siege": {
                 "type": "object",
@@ -386,8 +408,13 @@ TOOL_MISSION_ORG_RAPIDE = {
                     "protocoles_validation": {"type": "string"},
                     "reporting_type": {"type": "string"},
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
                 },
-                "required": ["analyse", "modeles_delegation", "protocoles_validation", "reporting_type", "so_what"],
+                "required": ["analyse", "modeles_delegation", "protocoles_validation", "reporting_type", "so_what", "kpis_sectoriels"],
             },
             "formalisation_audit_readiness": {
                 "type": "object",
@@ -403,8 +430,25 @@ TOOL_MISSION_ORG_RAPIDE = {
                         "description": "Critères typiques d'un audit interne Groupe",
                     },
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
+                    "grille_maturite": {
+                        "type": "array",
+                        "description": "Grille de maturité SSC sur 6 axes : stratégie, processus, orga, techno, compétences, performance",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "axe": {"type": "string"},
+                                "pratiques_world_class": {"type": "string"},
+                            },
+                            "required": ["axe", "pratiques_world_class"],
+                        },
+                    },
                 },
-                "required": ["analyse", "niveaux_maturite", "referentiels_utilises", "criteres_audit_groupe", "so_what"],
+                "required": ["analyse", "niveaux_maturite", "referentiels_utilises", "criteres_audit_groupe", "so_what", "kpis_sectoriels", "grille_maturite"],
             },
             "signaux_faibles": {
                 "type": "array",
@@ -545,8 +589,13 @@ TOOL_MISSION_ORG_PART_A = {
                     "gouvernance_observee": {"type": "string"},
                     "perimetre_fonctionnel": {"type": "string"},
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
                 },
-                "required": ["analyse", "structures_types", "gouvernance_observee", "perimetre_fonctionnel", "so_what"],
+                "required": ["analyse", "structures_types", "gouvernance_observee", "perimetre_fonctionnel", "so_what", "kpis_sectoriels"],
             },
             "processus_douaniers": {
                 "type": "object",
@@ -556,8 +605,13 @@ TOOL_MISSION_ORG_PART_A = {
                     "outils_systemes": {"type": "array", "items": {"type": "string"}},
                     "risques_frequents": {"type": "array", "items": {"type": "string"}},
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
                 },
-                "required": ["analyse", "bonnes_pratiques", "outils_systemes", "risques_frequents", "so_what"],
+                "required": ["analyse", "bonnes_pratiques", "outils_systemes", "risques_frequents", "so_what", "kpis_sectoriels"],
             },
         },
         "required": ["contexte_mission", "modeles_csp", "processus_douaniers"],
@@ -625,8 +679,13 @@ TOOL_MISSION_ORG_PART_B = {
                     "protocoles_validation": {"type": "string"},
                     "reporting_type": {"type": "string"},
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
                 },
-                "required": ["analyse", "modeles_delegation", "protocoles_validation", "reporting_type", "so_what"],
+                "required": ["analyse", "modeles_delegation", "protocoles_validation", "reporting_type", "so_what", "kpis_sectoriels"],
             },
             "formalisation_audit_readiness": {
                 "type": "object",
@@ -636,8 +695,25 @@ TOOL_MISSION_ORG_PART_B = {
                     "referentiels_utilises": {"type": "array", "items": {"type": "string"}},
                     "criteres_audit_groupe": {"type": "array", "items": {"type": "string"}},
                     "so_what": {"type": "string"},
+                    "kpis_sectoriels": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "3-5 KPIs mesurables typiques du secteur avec valeur benchmarked",
+                    },
+                    "grille_maturite": {
+                        "type": "array",
+                        "description": "Grille de maturité SSC sur 6 axes : stratégie, processus, orga, techno, compétences, performance",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "axe": {"type": "string"},
+                                "pratiques_world_class": {"type": "string"},
+                            },
+                            "required": ["axe", "pratiques_world_class"],
+                        },
+                    },
                 },
-                "required": ["analyse", "niveaux_maturite", "referentiels_utilises", "criteres_audit_groupe", "so_what"],
+                "required": ["analyse", "niveaux_maturite", "referentiels_utilises", "criteres_audit_groupe", "so_what", "kpis_sectoriels", "grille_maturite"],
             },
             "signaux_faibles": {
                 "type": "array",
@@ -916,28 +992,40 @@ Chaque champ entre [crochets] doit être remplacé par du contenu réel et subst
     "structures_types": ["[type CSP 1]", "[type CSP 2]", "[type CSP 3]"],
     "gouvernance_observee": "[2-3 phrases sur les pratiques de gouvernance dans des CSP similaires]",
     "perimetre_fonctionnel": "[2 phrases sur le périmètre fonctionnel typiquement délégué]",
-    "so_what": "[court terme : ce qu'il faut avant l'audit Groupe] [moyen terme : évolution structurelle cible]"
+    "so_what": "[court terme : ce qu'il faut avant l'audit Groupe] [moyen terme : évolution structurelle cible]",
+    "kpis_sectoriels": ["[KPI 1 avec valeur benchmarked]", "[KPI 2 avec valeur]", "[KPI 3]"]
   },
   "processus_douaniers": {
     "analyse": "[3-4 phrases sur les best practices douanières — citer 1 chiffre et 2 acteurs nommés]",
     "bonnes_pratiques": ["[bonne pratique 1]", "[bonne pratique 2]", "[bonne pratique 3]"],
     "outils_systemes": ["[outil 1]", "[outil 2]"],
     "risques_frequents": ["[risque 1]", "[risque 2]", "[risque 3]"],
-    "so_what": "[court terme : priorité avant audit] [moyen terme : sécurisation des processus]"
+    "so_what": "[court terme : priorité avant audit] [moyen terme : sécurisation des processus]",
+    "kpis_sectoriels": ["[KPI 1 avec valeur benchmarked]", "[KPI 2 avec valeur]", "[KPI 3]"]
   },
   "interface_filiale_siege": {
     "analyse": "[3-4 phrases sur les modèles d'interface filiale/siège observés]",
     "modeles_delegation": "[2-3 phrases sur les niveaux de délégation et d'autonomie observés]",
     "protocoles_validation": "[2 phrases sur les protocoles de validation typiques]",
     "reporting_type": "[2 phrases sur les pratiques de reporting filiale/siège]",
-    "so_what": "[court terme : clarifications urgentes] [moyen terme : formalisation des interfaces]"
+    "so_what": "[court terme : clarifications urgentes] [moyen terme : formalisation des interfaces]",
+    "kpis_sectoriels": ["[KPI 1 avec valeur benchmarked]", "[KPI 2 avec valeur]", "[KPI 3]"]
   },
   "formalisation_audit_readiness": {
     "analyse": "[3-4 phrases sur les pratiques de formalisation et la maturité opérationnelle]",
     "niveaux_maturite": "[2-3 phrases sur les niveaux de maturité observés dans des structures similaires]",
     "referentiels_utilises": ["[référentiel 1]", "[référentiel 2]"],
     "criteres_audit_groupe": ["[critère audit 1]", "[critère audit 2]", "[critère audit 3]"],
-    "so_what": "[court terme : livrables à préparer avant l'audit] [moyen terme : maturité cible]"
+    "so_what": "[court terme : livrables à préparer avant l'audit] [moyen terme : maturité cible]",
+    "kpis_sectoriels": ["[KPI 1 avec valeur benchmarked]", "[KPI 2 avec valeur]", "[KPI 3]"],
+    "grille_maturite": [
+      {"axe": "Stratégie & portée", "pratiques_world_class": "[description niveau world-class]"},
+      {"axe": "Processus & standardisation", "pratiques_world_class": "[description]"},
+      {"axe": "Organisation & gouvernance", "pratiques_world_class": "[description]"},
+      {"axe": "Technologie & data", "pratiques_world_class": "[description]"},
+      {"axe": "Compétences & culture", "pratiques_world_class": "[description]"},
+      {"axe": "Performance & contrôle interne", "pratiques_world_class": "[description]"}
+    ]
   },
   "signaux_faibles": [
     {

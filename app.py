@@ -430,240 +430,448 @@ with tab_analyse:
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab_mission:
     st.header("🎯 Benchmark Mission — Consultant")
-    st.caption("Générez un benchmark stratégique personnalisé pour votre mission, livré en PPT LMS.")
+    st.caption("Benchmark stratégique avec cadrage guidé et identification automatique des comparables (taille, positionnement, secteurs adjacents).")
 
-    # ── Formulaire de configuration ──
-    with st.form("form_mission"):
-        st.subheader("Configuration de la mission")
+    # ── Wizard state ──────────────────────────────────────────────────────────
+    for _msk, _msv in [("mw_step", "form"), ("mw_draft", {}), ("mw_cadrage_a", {}), ("mw_comparables", {})]:
+        if _msk not in st.session_state:
+            st.session_state[_msk] = _msv
 
-        mission_type_sel = st.radio(
-            "Type de benchmark",
-            ["RH", "Organisationnel"],
-            horizontal=True,
-            help=(
-                "**RH** : axes Business Model RH, Organisation/Effectifs, Gouvernance RH, Innovation managériale. "
-                "**Organisationnel** : axes Modèles CSP, Processus douaniers, Interface Filiale/Siège, "
-                "Formalisation & Audit-readiness."
-            ),
-        )
+    _cur_step = st.session_state["mw_step"]
 
-        col1, col2 = st.columns(2)
-        with col1:
-            _mission_ph = (
-                "Ex: Diagnostic organisationnel SIEPF — BEL Maroc"
-                if mission_type_sel == "Organisationnel" else
-                "Ex: Diagnostic RH — BEL Groupe"
-            )
-            nom_mission = st.text_input("Nom de la mission *", placeholder=_mission_ph)
-            entreprise_cible = st.text_input("Entreprise / Acteur cible *", placeholder="Ex: BEL Maroc, OCP, Marjane…")
-            secteur_mission = st.selectbox("Secteur d'activité *", [
-                "Agroalimentaire", "Industrie & Manufacturing", "Banque & Finance",
-                "Assurance", "Santé & Pharma", "Retail & Distribution",
-                "Telecom & Digital", "Énergie & Utilities", "Immobilier & BTP",
-                "Transport & Logistique", "Secteur Public & Parapublic", "Autre",
-            ])
-            geographie = st.selectbox("Géographie prioritaire *", [
-                "Maroc", "Maroc & MENA", "Afrique francophone", "France & Europe", "International",
-            ])
-        with col2:
-            mode_analyse = st.radio("Mode d'analyse", ["Rapide (~2 min)", "Approfondi (~6 min)"],
-                                    horizontal=True,
-                                    help="Rapide : 1 appel LLM, axes fixes. Approfondi : 3 appels, benchmark complet avec chiffres et entreprises nommées.")
-            periode = st.selectbox("Période d'analyse",
-                ["3 derniers mois", "6 derniers mois", "12 derniers mois", "24 derniers mois"],
-                index=1)
-
-        if mission_type_sel == "Organisationnel":
-            _angle_ph = (
-                "Décrivez les axes de votre benchmark.\n"
-                "Ex : Comparer les pratiques de gestion douanière et les modèles organisationnels "
-                "des CSP similaires à la SIEPF, au regard des standards du Groupe Bel."
-            )
+    # ── Indicateur de progression ─────────────────────────────────────────────
+    _step_order = ["form", "comparables"]
+    _step_labels = {"form": "① Cadrage mission", "comparables": "② Comparables & Lancement"}
+    _cur_i = _step_order.index(_cur_step) if _cur_step in _step_order else 1
+    _prog_cols = st.columns(2)
+    for _pi, _ps in enumerate(_step_order):
+        _lbl = _step_labels[_ps]
+        if _pi < _cur_i:
+            _prog_cols[_pi].markdown(f"✅ ~~{_lbl}~~")
+        elif _pi == _cur_i:
+            _prog_cols[_pi].markdown(f"**▶ {_lbl}**")
         else:
-            _angle_ph = (
-                "Décrivez les axes de votre benchmark.\n"
-                "Ex : Comment BEL Groupe structure-t-il ses équipes RH pour accompagner son expansion "
-                "en Afrique ? Quelles compétences clés sont en tension ?"
-            )
-        angle_strategique = st.text_area(
-            "Axes du benchmark / Question centrale *",
-            placeholder=_angle_ph,
-            max_chars=600, height=110
-        )
-        concurrent_reference = st.text_input(
-            "Concurrent ou référence sectorielle à comparer (optionnel)",
-            placeholder="Ex : Nestlé Maroc, Danone, Label'Vie, SABIC…"
-        )
+            _prog_cols[_pi].markdown(f"○ {_lbl}")
 
-        # ── Noms des 4 axes (personnalisables) ───────────────────────────────
-        with st.expander("✏️ Personnaliser les titres des 4 slides d'analyse (optionnel)"):
-            if mission_type_sel == "Organisationnel":
+    if _cur_step != "form":
+        st.markdown("")
+        if st.button("↩ Nouvelle mission", key="mw_reset"):
+            for _k in [k for k in list(st.session_state.keys()) if k.startswith("mw_") or k == "mission_result"]:
+                st.session_state.pop(_k, None)
+            st.rerun()
+
+    st.divider()
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # ÉTAPE 1 — CADRAGE
+    # ════════════════════════════════════════════════════════════════════════════
+    if _cur_step == "form":
+        with st.form("mw_form_cadrage"):
+            st.subheader("Configuration de la mission")
+
+            mission_type_sel = st.radio(
+                "Type de benchmark",
+                ["RH", "Organisationnel"],
+                horizontal=True,
+                help=(
+                    "**RH** : axes Business Model RH, Organisation/Effectifs, Gouvernance RH, Innovation managériale. "
+                    "**Organisationnel** : axes Modèles CSP, Processus douaniers, Interface Filiale/Siège, "
+                    "Formalisation & Audit-readiness."
+                ),
+            )
+
+            _col1, _col2 = st.columns(2)
+            with _col1:
+                nom_mission = st.text_input(
+                    "Nom de la mission *",
+                    placeholder="Ex: Diagnostic organisationnel SIEPF — BEL Maroc",
+                )
+                entreprise_cible = st.text_input(
+                    "Entreprise / Acteur cible *",
+                    placeholder="Ex: BEL Maroc, OCP, Marjane…",
+                )
+                secteur_mission = st.selectbox("Secteur d'activité *", [
+                    "Agroalimentaire", "Industrie & Manufacturing", "Banque & Finance",
+                    "Assurance", "Santé & Pharma", "Retail & Distribution",
+                    "Telecom & Digital", "Énergie & Utilities", "Immobilier & BTP",
+                    "Transport & Logistique", "Secteur Public & Parapublic", "Autre",
+                ])
+                geographie = st.selectbox("Géographie prioritaire *", [
+                    "Maroc", "Maroc & MENA", "Afrique francophone", "France & Europe", "International",
+                ])
+            with _col2:
+                mode_analyse = st.radio(
+                    "Mode d'analyse",
+                    ["Rapide (~2 min)", "Approfondi (~6 min)"],
+                    horizontal=True,
+                    help="Rapide : 1 appel LLM. Approfondi : 3 appels, benchmark complet avec chiffres.",
+                )
+                periode = st.selectbox(
+                    "Période d'analyse",
+                    ["3 derniers mois", "6 derniers mois", "12 derniers mois", "24 derniers mois"],
+                    index=1,
+                )
+
+            st.markdown("---")
+            st.subheader("Questions de cadrage")
+            st.caption("Ces réponses orientent l'identification des comparables et l'angle de l'analyse.")
+
+            cad_q1 = st.text_area(
+                "① Quelle décision stratégique ce benchmark doit-il éclairer ? *",
+                placeholder="Ex : Décision de création d'un CSP douanier Maghreb / Restructuration de la DRH…",
+                height=75,
+            )
+            cad_q2 = st.text_area(
+                "② Quel est le périmètre exact (entités, fonctions, géographie) ? *",
+                placeholder="Ex : Filiale Maroc — douane + comptabilité fournisseurs / DRH Groupe + filiales MENA…",
+                height=75,
+            )
+            cad_q3 = st.text_area(
+                "③ Quelles dimensions ou variables sont prioritaires pour la comparaison ? *",
+                placeholder="Ex : Coût/déclaration, délai mainlevée, taux OEA / Ratio HR/FTE, time-to-fill…",
+                height=75,
+            )
+            _cad_col1, _cad_col2 = st.columns(2)
+            with _cad_col1:
+                cad_q4 = st.text_input(
+                    "④ Contraintes spécifiques ? (optionnel)",
+                    placeholder="Ex : Réglementation ADII, exigences groupe, délai 3 mois…",
+                )
+            with _cad_col2:
+                cad_q5 = st.text_input(
+                    "⑤ Public cible et objectif final ? (optionnel)",
+                    placeholder="Ex : DAF + DG Maroc → décision COMEX",
+                )
+
+            _submit_cadrage = st.form_submit_button(
+                "Identifier les comparables →",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if _submit_cadrage:
+            if not nom_mission or not entreprise_cible or not cad_q1 or not cad_q2 or not cad_q3:
+                st.error("⚠️ Les champs marqués * sont obligatoires.")
+                st.stop()
+
+            _angle_parts = [
+                f"Décision à éclairer : {cad_q1}",
+                f"Périmètre : {cad_q2}",
+                f"Dimensions prioritaires : {cad_q3}",
+            ]
+            if cad_q4:
+                _angle_parts.append(f"Contraintes : {cad_q4}")
+            if cad_q5:
+                _angle_parts.append(f"Destinataires / objectif : {cad_q5}")
+
+            _cadrage_answers = {
+                "Décision stratégique": cad_q1,
+                "Périmètre": cad_q2,
+                "Dimensions prioritaires": cad_q3,
+                "Contraintes": cad_q4,
+                "Public cible": cad_q5,
+            }
+            _draft = {
+                "nom_mission": nom_mission,
+                "entreprise_cible": entreprise_cible,
+                "secteur": secteur_mission,
+                "geographie": geographie,
+                "angle_strategique_rh": "\n".join(_angle_parts),
+                "concurrent_reference": "",
+                "periode": periode,
+                "mode": "Rapide" if "Rapide" in mode_analyse else "Approfondi",
+                "type": mission_type_sel,
+            }
+
+            with st.spinner("🔍 Identification des entreprises comparables…"):
+                try:
+                    from agent.cadrage_mission import identify_comparables as _ident_comp
+                    _settings_c = load_settings()
+                    _comp_result = _ident_comp(_draft, _cadrage_answers, _settings_c)
+                except Exception as _e_comp:
+                    _comp_result = {
+                        "comparables": [],
+                        "dimensions_communes": [],
+                        "note_methodologique": f"Identification indisponible : {_e_comp}",
+                    }
+
+            st.session_state["mw_draft"] = _draft
+            st.session_state["mw_cadrage_a"] = _cadrage_answers
+            st.session_state["mw_comparables"] = _comp_result
+            st.session_state["mw_step"] = "comparables"
+            st.rerun()
+
+    # ════════════════════════════════════════════════════════════════════════════
+    # ÉTAPE 2 — COMPARABLES + OPTIONS + LANCEMENT
+    # ════════════════════════════════════════════════════════════════════════════
+    elif _cur_step == "comparables":
+        _draft = st.session_state["mw_draft"]
+        _comp_data = st.session_state["mw_comparables"]
+        _comparables = _comp_data.get("comparables", [])
+        _dims = _comp_data.get("dimensions_communes", [])
+        _note = _comp_data.get("note_methodologique", "")
+        _type_m = _draft.get("type", "RH")
+
+        if "mission_result" not in st.session_state:
+            st.subheader(f"Comparables identifiés — {_draft.get('entreprise_cible', '')}")
+            if _note:
+                st.info(f"💡 {_note}")
+
+            _type_icons = {
+                "Concurrent direct": "🔵",
+                "Best-in-class sectoriel": "🟢",
+                "Best practice fonctionnel": "🟡",
+                "Benchmark aspiration": "🟣",
+            }
+
+            if _type_m == "Organisationnel":
+                _slides_dispo = [
+                    ("supply_chain_interne", "Supply chain interne"),
+                    ("gouvernance_financiere", "Gouvernance financière"),
+                    ("conformite_reglementaire", "Conformité réglementaire"),
+                    ("matrice_risques", "Matrice des risques"),
+                ]
                 _d1, _d2 = "Modèles CSP — Benchmark comparatif", "Processus douaniers — Best practices"
                 _d3, _d4 = "Interface Filiale / Siège", "Formalisation & Audit-readiness"
             else:
+                _slides_dispo = [
+                    ("effectifs_dimensionnement", "Effectifs & dimensionnement"),
+                    ("recrutement_talent", "Recrutement & talent"),
+                    ("formation_competences", "Formation & compétences"),
+                    ("culture_engagement", "Culture & engagement"),
+                    ("remuneration_social", "Rémunération & social"),
+                    ("sirh_digitalisation", "SIRH & digitalisation RH"),
+                    ("diversite_inclusion", "Diversité & inclusion"),
+                    ("relations_sociales", "Relations sociales"),
+                ]
                 _d1, _d2 = "Business Model — Lecture RH", "Organisation & Dimensionnement"
                 _d3, _d4 = "Gouvernance RH & Management", "Signaux faibles & Innovations RH"
-            _ax_cols = st.columns(2)
-            with _ax_cols[0]:
-                axe1 = st.text_input("Titre Axe 1", placeholder=_d1, key="axe1")
-                axe3 = st.text_input("Titre Axe 3", placeholder=_d3, key="axe3")
-            with _ax_cols[1]:
-                axe2 = st.text_input("Titre Axe 2", placeholder=_d2, key="axe2")
-                axe4 = st.text_input("Titre Axe 4", placeholder=_d4, key="axe4")
 
-        st.markdown("**Sources prioritaires** (optionnel)")
-        src_cols = st.columns(3)
-        sources_cochees = []
-        sources_dispo = [
-            ("presse_sectorielle", "Presse sectorielle"),
-            ("publications_academiques", "Publications & études"),
-            ("rapports_annuels", "Rapports annuels"),
-            ("linkedin", "LinkedIn & réseaux pro"),
-            ("offres_emploi", "Offres d'emploi"),
-            ("sources_arabophones", "Sources arabophones"),
-        ]
-        for i, (key, label) in enumerate(sources_dispo):
-            with src_cols[i % 3]:
-                if st.checkbox(label, key=f"src_{key}"):
-                    sources_cochees.append(key)
-
-        st.markdown("**Slides thématiques optionnelles**")
-        sl_cols = st.columns(4)
-        slides_cochees = []
-        if mission_type_sel == "Organisationnel":
-            slides_dispo = [
-                ("supply_chain_interne", "Supply chain interne"),
-                ("gouvernance_financiere", "Gouvernance financière"),
-                ("conformite_reglementaire", "Conformité réglementaire"),
-                ("matrice_risques", "Matrice des risques"),
+            _sources_dispo = [
+                ("presse_sectorielle", "Presse sectorielle"),
+                ("publications_academiques", "Publications & études"),
+                ("rapports_annuels", "Rapports annuels"),
+                ("linkedin", "LinkedIn & réseaux pro"),
+                ("offres_emploi", "Offres d'emploi"),
+                ("sources_arabophones", "Sources arabophones"),
             ]
-        else:
-            slides_dispo = [
-                ("effectifs_dimensionnement", "Effectifs & dimensionnement"),
-                ("recrutement_talent", "Recrutement & talent"),
-                ("formation_competences", "Formation & compétences"),
-                ("culture_engagement", "Culture & engagement"),
-                ("remuneration_social", "Rémunération & social"),
-                ("sirh_digitalisation", "SIRH & digitalisation RH"),
-                ("diversite_inclusion", "Diversité & inclusion"),
-                ("relations_sociales", "Relations sociales"),
-            ]
-        for i, (key, label) in enumerate(slides_dispo):
-            with sl_cols[i % 4]:
-                if st.checkbox(label, key=f"sl_{key}"):
-                    slides_cochees.append(key)
 
-        submitted = st.form_submit_button("▶ Générer le benchmark mission", type="primary", use_container_width=True)
+            with st.form("mw_form_comparables"):
+                if _comparables:
+                    st.markdown("**Cochez les entreprises à inclure dans le benchmark :**")
+                    st.caption("🔵 Concurrent direct · 🟢 Best-in-class sectoriel · 🟡 Best practice fonctionnel · 🟣 Benchmark aspiration")
 
-    if submitted:
-        # Validation
-        if not nom_mission or not entreprise_cible or not angle_strategique:
-            st.error("⚠️ Les champs Nom de la mission, Entreprise cible et Axes du benchmark sont obligatoires.")
-            st.stop()
+                    _by_type: dict = {}
+                    for _c in _comparables:
+                        _by_type.setdefault(_c.get("type_comparaison", "Autre"), []).append(_c)
 
-        mission_config = {
-            "nom_mission": nom_mission,
-            "entreprise_cible": entreprise_cible,
-            "secteur": secteur_mission,
-            "geographie": geographie,
-            "angle_strategique_rh": angle_strategique,
-            "concurrent_reference": concurrent_reference,
-            "periode": periode,
-            "mode": "Rapide" if "Rapide" in mode_analyse else "Approfondi",
-            "type": mission_type_sel,
-            "sources": sources_cochees,
-            "slides_optionnelles": slides_cochees,
-            "axes_noms": {
-                "axe1": axe1.strip() if axe1.strip() else None,
-                "axe2": axe2.strip() if axe2.strip() else None,
-                "axe3": axe3.strip() if axe3.strip() else None,
-                "axe4": axe4.strip() if axe4.strip() else None,
-            },
-        }
+                    _sel_noms = []
+                    _global_ci = 0
+                    for _type_k, _clist in _by_type.items():
+                        st.markdown(f"**{_type_icons.get(_type_k, '●')} {_type_k}**")
+                        for _c in _clist:
+                            _pert = _c.get("pertinence", "Moyenne")
+                            _ck = f"mw_comp_{_global_ci}"
+                            _ca, _cb = st.columns([1, 4])
+                            with _ca:
+                                _chk = st.checkbox(_c["nom"], value=(_pert == "Haute"), key=_ck)
+                            with _cb:
+                                st.caption(f"**{_c.get('secteur','')}** · {_c.get('pays','')} · {_c.get('taille','')} · pertinence : {_pert}")
+                                st.caption(f"*{_c.get('justification','')}*")
+                            if _chk:
+                                _sel_noms.append(_c["nom"])
+                            _global_ci += 1
+                else:
+                    st.info("Aucun comparable identifié automatiquement.")
+                    _sel_noms = []
 
-        # Réinitialiser les résultats précédents
-        st.session_state.pop("mission_result", None)
+                concurrent_reference_extra = st.text_input(
+                    "Ajouter des références supplémentaires (optionnel)",
+                    placeholder="Ex : Nestlé Maroc, Procter & Gamble…",
+                    key="mw_concurrent_extra",
+                )
 
-        settings_m = load_settings()
-        sectors_m = load_sectors()
-        secteur_map = {
-            "Pharma": "pharma_maroc", "Banque": "banque_finance",
-            "Industrie": "industrie", "Santé": "sante",
-            "Telecom": "telecom_maroc", "Agroalimentaire": "agroalimentaire_maroc",
-            "Retail": "distribution_maroc",
-        }
-        sector_key_m = secteur_map.get(secteur_mission, list(sectors_m.keys())[0])
-        sector_config_m = {**sectors_m[sector_key_m], "key": sector_key_m}
+                if _dims:
+                    with st.expander(f"📐 Dimensions de comparaison retenues ({len(_dims)})", expanded=False):
+                        for _d in _dims:
+                            st.markdown(f"**{_d.get('dimension','')}** — {_d.get('definition','')} *(unité : {_d.get('unite_mesure','?')})*")
 
-        with st.status("⏳ Génération du benchmark mission…", expanded=True) as status_m:
+                st.markdown("---")
+                with st.expander("⚙️ Options avancées (slides, sources, axes)", expanded=False):
+                    st.markdown("**✏️ Personnaliser les titres des slides**")
+                    _ax_cols = st.columns(2)
+                    with _ax_cols[0]:
+                        axe1 = st.text_input("Titre Axe 1", placeholder=_d1, key="mw_axe1")
+                        axe3 = st.text_input("Titre Axe 3", placeholder=_d3, key="mw_axe3")
+                    with _ax_cols[1]:
+                        axe2 = st.text_input("Titre Axe 2", placeholder=_d2, key="mw_axe2")
+                        axe4 = st.text_input("Titre Axe 4", placeholder=_d4, key="mw_axe4")
 
-            st.write("🔎 **Étape 1/3** — Collecte des sources…")
-            try:
-                from agent import collector as col_m
-                articles_m = col_m.collect(sector_config_m, settings_m)
-                st.write(f"✅ **{len(articles_m)} articles web collectés**")
-            except Exception as e:
-                status_m.update(label="❌ Erreur collecte", state="error")
-                st.error(f"Erreur collecte : {e}")
-                st.stop()
-            # Enrichissement avec les PDFs Magazines
-            try:
-                from agent import pdf_collector as _pdf_col_m
-                _pdf_arts_m = _pdf_col_m.collect_pdfs(sector_config_m, settings_m)
-                if _pdf_arts_m:
-                    articles_m = articles_m + _pdf_arts_m
-                    st.caption(f"  📰 +{len(_pdf_arts_m)} PDF(s) Magazines ajoutés")
-            except Exception as _pe:
-                st.caption(f"  ⚠️ PDFs Magazines ignorés : {_pe}")
+                    st.markdown("**Sources prioritaires**")
+                    _src_cols = st.columns(3)
+                    sources_cochees = []
+                    for _si, (_skey, _slabel) in enumerate(_sources_dispo):
+                        with _src_cols[_si % 3]:
+                            if st.checkbox(_slabel, key=f"mw_src_{_skey}"):
+                                sources_cochees.append(_skey)
 
-            st.write(f"🧠 **Étape 2/3** — Analyse Claude ({mission_config['mode']})…")
-            _ph = st.empty()
-            def _prog_m(step, total, msg): _ph.caption(f"  ↳ {msg}")
-            try:
-                from agent import analyzer_mission as am
-                analysis_m = am.analyze_mission(mission_config, articles_m, settings_m, _prog_m)
-                _ph.empty()
-                nb_rec_m = len(analysis_m.get("recommandations_mission", []))
-                st.write(f"✅ **Benchmark produit** — {nb_rec_m} recommandations · {len(analysis_m.get('signaux_faibles', []))} signaux")
-            except Exception as e:
-                status_m.update(label="❌ Erreur analyse", state="error")
-                st.error(f"Erreur analyse : {e}")
-                import traceback; st.code(traceback.format_exc())
-                st.stop()
+                    st.markdown("**Slides thématiques optionnelles**")
+                    _sl_cols = st.columns(4)
+                    slides_cochees = []
+                    for _sli, (_slkey, _sllabel) in enumerate(_slides_dispo):
+                        with _sl_cols[_sli % 4]:
+                            if st.checkbox(_sllabel, key=f"mw_sl_{_slkey}"):
+                                slides_cochees.append(_slkey)
 
-            st.write("📊 **Étape 3/3** — Génération PPT LMS…")
-            try:
-                import ppt_generator as pptgen
-                from datetime import datetime as _dt
-                ppt_name = f"Benchmark_LMS_{entreprise_cible.replace(' ', '_')}_{_dt.now().strftime('%Y-%m-%d')}.pptx"
-                ppt_path = str(ROOT / "reports" / ppt_name)
-                pptgen.generate_lms_ppt(analysis_m, mission_config, ppt_path)
-                # Sauvegarder JSON mission
-                import json as _json
-                json_m_path = ppt_path.replace(".pptx", ".json")
-                with open(json_m_path, "w", encoding="utf-8") as fp:
-                    _json.dump({**analysis_m, "_mission_config": mission_config}, fp, ensure_ascii=False, indent=2)
-                st.write(f"  📊 `{ppt_name}`")
-                # Stocker dans session_state pour survivre au rerun
-                st.session_state["mission_result"] = {
-                    "ppt_path": ppt_path,
-                    "ppt_name": ppt_name,
-                    "json_path": json_m_path,
-                    "nb_slides_opt": len(slides_cochees),
+                _submit_analyse = st.form_submit_button(
+                    "▶ Lancer l'analyse benchmark",
+                    type="primary",
+                    use_container_width=True,
+                )
+
+            if _submit_analyse:
+                _concurrent_ref = ", ".join(_sel_noms)
+                if concurrent_reference_extra:
+                    _concurrent_ref = (_concurrent_ref + ", " + concurrent_reference_extra).strip(", ")
+
+                _angle = _draft.get("angle_strategique_rh", "")
+                if _dims:
+                    _dims_str = ", ".join(d.get("dimension", "") for d in _dims[:4] if d.get("dimension"))
+                    if _dims_str:
+                        _angle += f"\nDimensions de comparaison retenues : {_dims_str}"
+
+                mission_config = {
+                    **_draft,
+                    "concurrent_reference": _concurrent_ref,
+                    "angle_strategique_rh": _angle,
+                    "sources": sources_cochees,
+                    "slides_optionnelles": slides_cochees,
+                    "axes_noms": {
+                        "axe1": axe1.strip() or None,
+                        "axe2": axe2.strip() or None,
+                        "axe3": axe3.strip() or None,
+                        "axe4": axe4.strip() or None,
+                    },
                 }
-            except ImportError:
-                status_m.update(label="❌ python-pptx manquant", state="error")
-                st.error("python-pptx non installé. Exécutez : pip install python-pptx")
-                st.stop()
-            except Exception as e:
-                status_m.update(label="❌ Erreur PPT", state="error")
-                st.error(f"Erreur génération PPT : {e}")
-                import traceback; st.code(traceback.format_exc())
-                st.stop()
 
-            status_m.update(label="✅ Benchmark mission généré !", state="complete")
+                st.session_state.pop("mission_result", None)
 
-    # ── Boutons téléchargement (persistent via session_state) ─────────────────
+                settings_m = load_settings()
+                sectors_m = load_sectors()
+                _secteur_map = {
+                    "Pharma": "pharma_maroc", "Banque": "banque_finance",
+                    "Industrie": "industrie", "Santé": "sante",
+                    "Telecom": "telecom_maroc", "Agroalimentaire": "agroalimentaire_maroc",
+                    "Retail": "distribution_maroc",
+                }
+                sector_key_m = _secteur_map.get(mission_config["secteur"], list(sectors_m.keys())[0])
+                sector_config_m = {**sectors_m[sector_key_m], "key": sector_key_m}
+
+                with st.status("⏳ Génération du benchmark mission…", expanded=True) as status_m:
+
+                    st.write("🔎 **Étape 1/3** — Collecte des sources…")
+                    try:
+                        from agent import collector as col_m
+                        articles_m = col_m.collect(sector_config_m, settings_m)
+                        st.write(f"✅ **{len(articles_m)} articles web collectés**")
+                    except Exception as e:
+                        status_m.update(label="❌ Erreur collecte", state="error")
+                        st.error(f"Erreur collecte : {e}")
+                        st.stop()
+                    try:
+                        from agent import pdf_collector as _pdf_col_m
+                        _pdf_arts_m = _pdf_col_m.collect_pdfs(sector_config_m, settings_m)
+                        if _pdf_arts_m:
+                            articles_m = articles_m + _pdf_arts_m
+                            st.caption(f"  📰 +{len(_pdf_arts_m)} PDF(s) Magazines ajoutés")
+                    except Exception as _pe:
+                        st.caption(f"  ⚠️ PDFs Magazines ignorés : {_pe}")
+
+                    st.write(f"🧠 **Étape 2/3** — Analyse Claude ({mission_config['mode']})…")
+                    _ph = st.empty()
+                    def _prog_m(step, total, msg): _ph.caption(f"  ↳ {msg}")
+                    try:
+                        from agent import analyzer_mission as am
+                        analysis_m = am.analyze_mission(mission_config, articles_m, settings_m, _prog_m)
+                        _ph.empty()
+                        nb_rec_m = len(analysis_m.get("recommandations_mission", []))
+                        st.write(f"✅ **Benchmark produit** — {nb_rec_m} recommandations · {len(analysis_m.get('signaux_faibles', []))} signaux")
+                    except Exception as e:
+                        status_m.update(label="❌ Erreur analyse", state="error")
+                        st.error(f"Erreur analyse : {e}")
+                        import traceback; st.code(traceback.format_exc())
+                        st.stop()
+
+                    try:
+                        from agent import qa_gate as _qag
+                        _qa_m = _qag.run_qa_mission(analysis_m, articles_m, settings_m, mission_config)
+                        analysis_m["_qa_mission"] = _qa_m
+                        _qa_score = _qa_m["score"]
+                        _qa_status = _qa_m["status"]
+                        if _qa_status == "publiable":
+                            st.write(f"  ✅ **Contrôle qualité** — Score {_qa_score}/100 (publiable)")
+                        else:
+                            st.warning(f"⚠️ **Contrôle qualité** — Score {_qa_score}/100 (quarantaine)")
+                            for _iss in _qa_m.get("issues", []):
+                                st.caption(f"  ↳ {_iss}")
+                    except Exception as _qe:
+                        st.caption(f"  ⚠️ QA code ignoré : {_qe}")
+
+                    if mission_config.get("mode") == "Approfondi":
+                        try:
+                            from agent import qa_benchmark as _qab
+                            st.caption("  🔍 Vérification sources et contenu (LLM)…")
+                            _qa_llm = _qab.verify_benchmark(analysis_m, mission_config, articles_m, settings_m)
+                            analysis_m["_qa_benchmark"] = _qa_llm
+                            _llm_score = _qa_llm.get("score_fiabilite", 0)
+                            _llm_verdict = _qa_llm.get("verdict", "?")
+                            _llm_icon = "✅" if _llm_verdict == "fiable" else ("⚠️" if _llm_verdict == "acceptable" else "🔴")
+                            st.write(f"  {_llm_icon} **Fiabilité contenu** — {_llm_score}/100 ({_llm_verdict})")
+                            _issues_llm = _qa_llm.get("issues", [])
+                            _hautes = [i for i in _issues_llm if i.get("severite") == "haute"]
+                            if _hautes:
+                                with st.expander(f"⚠️ {len(_hautes)} point(s) à corriger (sévérité haute)", expanded=False):
+                                    for _i in _hautes:
+                                        st.caption(f"[{_i.get('axe','')}] {_i.get('detail','')}")
+                            _pts_forts = _qa_llm.get("points_forts", [])
+                            if _pts_forts:
+                                with st.expander(f"✅ Points forts ({len(_pts_forts)})", expanded=False):
+                                    for _pf in _pts_forts:
+                                        st.caption(f"• {_pf}")
+                        except Exception as _qle:
+                            st.caption(f"  ⚠️ Vérification LLM ignorée : {_qle}")
+
+                    st.write("📊 **Étape 3/3** — Génération PPT LMS…")
+                    try:
+                        import ppt_generator as pptgen
+                        from datetime import datetime as _dt
+                        ppt_name = f"Benchmark_LMS_{mission_config['entreprise_cible'].replace(' ', '_')}_{_dt.now().strftime('%Y-%m-%d')}.pptx"
+                        ppt_path = str(ROOT / "reports" / ppt_name)
+                        pptgen.generate_lms_ppt(analysis_m, mission_config, ppt_path)
+                        import json as _json
+                        json_m_path = ppt_path.replace(".pptx", ".json")
+                        with open(json_m_path, "w", encoding="utf-8") as fp:
+                            _json.dump({**analysis_m, "_mission_config": mission_config}, fp, ensure_ascii=False, indent=2)
+                        st.write(f"  📊 `{ppt_name}`")
+                        st.session_state["mission_result"] = {
+                            "ppt_path": ppt_path,
+                            "ppt_name": ppt_name,
+                            "json_path": json_m_path,
+                            "nb_slides_opt": len(slides_cochees),
+                        }
+                    except ImportError:
+                        status_m.update(label="❌ python-pptx manquant", state="error")
+                        st.error("python-pptx non installé. Exécutez : pip install python-pptx")
+                        st.stop()
+                    except Exception as e:
+                        status_m.update(label="❌ Erreur PPT", state="error")
+                        st.error(f"Erreur génération PPT : {e}")
+                        import traceback; st.code(traceback.format_exc())
+                        st.stop()
+
+                    status_m.update(label="✅ Benchmark mission généré !", state="complete")
+
+    # ── Résultats (persistent via session_state) ──────────────────────────────
     if "mission_result" in st.session_state:
         res = st.session_state["mission_result"]
         nb_opt = res["nb_slides_opt"]
@@ -689,7 +897,6 @@ with tab_mission:
                     use_container_width=True,
                 )
 
-        # ── Sources bibliographiques ─────────────────────────────────────────
         import json as _json_src
         try:
             with open(res["json_path"], encoding="utf-8") as _jf:

@@ -148,3 +148,99 @@ def save_quarantine(result: dict, sector_label: str, reports_dir) -> Optional[Pa
     except Exception as e:
         logger.warning(f"Impossible d'écrire la quarantaine : {e}")
         return None
+
+
+def run_qa_mission(result: dict, articles: list, settings: dict, mission_config: dict = None) -> dict:
+    """
+    Contrôle qualité 100% code pour un benchmark mission (analyzer_mission.analyze_mission).
+    Compatible RH et Organisationnel. Aucun coût token.
+    """
+    import re
+
+    mission_config = mission_config or {}
+    is_org = mission_config.get("type", "RH").upper() == "ORGANISATIONNEL"
+    entreprise_cible = mission_config.get("entreprise_cible", "")
+
+    checks = []
+
+    def add(name, passed, weight, detail=""):
+        checks.append({"name": name, "passed": bool(passed), "weight": weight, "detail": detail})
+
+    # 1. Index des sources présent (20)
+    index = result.get("index_sources") or []
+    add("Index des sources", len(index) >= 3, 20,
+        f"{len(index)} sources indexées" if index else "index_sources vide ou < 3 sources")
+
+    # 2. Axes principaux complets (25)
+    if is_org:
+        axes_keys = ["modeles_csp", "processus_douaniers", "interface_filiale_siege", "formalisation_audit_readiness"]
+    else:
+        axes_keys = ["business_model_rh", "organisation_dimensionnement", "gouvernance_rh", "innovation_manageriale"]
+
+    missing_axes = [k for k in axes_keys if not _filled(result.get(k, {}).get("analyse", ""), 40)]
+    add("Axes principaux complets", len(missing_axes) == 0, 25,
+        "tous les axes sont remplis" if not missing_axes else f"axes incomplets : {missing_axes}")
+
+    # 3. Chiffres présents dans les analyses (20)
+    # Cherche des patterns : "85%", "2023", "48h", "€", "3,2", "12 mois", etc.
+    _pattern_chiffres = re.compile(r'\b\d[\d,\.]*\s*(%|€|\$|h\b|an|mois|jours?|points?|fois)\b|\b20[2-9]\d\b|\b\d{2,}\b')
+    all_analyses = " ".join(
+        (result.get(k) or {}).get("analyse", "") for k in axes_keys
+    )
+    n_chiffres = len(_pattern_chiffres.findall(all_analyses))
+    add("Chiffres présents dans les analyses", n_chiffres >= 4, 20,
+        f"{n_chiffres} occurrences chiffrées trouvées" if n_chiffres >= 4 else f"seulement {n_chiffres} chiffres (min 4 requis)")
+
+    # 4. Entreprises nommées (heuristique : majuscules, min 3 lettres) (15)
+    # Cherche dans les analyses des noms propres (mots en majuscule de 3+ lettres non en début de phrase)
+    _pattern_entite = re.compile(r'(?<!\. )(?<!\n)[A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]{2,})*')
+    entites = set()
+    for k in axes_keys:
+        analyse = (result.get(k) or {}).get("analyse", "")
+        entites |= set(_pattern_entite.findall(analyse))
+    # Exclure les mots courants
+    EXCLUSIONS = {"Les", "Le", "La", "Un", "Une", "Des", "Pour", "Dans", "Sur", "Avec", "Cette", "Selon",
+                  "France", "Maroc", "Europe", "Groupe", "Monde", "Secteur", "Source", "Selon",
+                  "Rapport", "Guide", "Note", "Voir"}
+    entites_reelles = [e for e in entites if e not in EXCLUSIONS and len(e) > 3]
+    add("Entreprises/acteurs nommés dans les analyses", len(entites_reelles) >= 4, 15,
+        f"{len(entites_reelles)} entités nommées" if len(entites_reelles) >= 4 else f"seulement {len(entites_reelles)} entités (min 4)")
+
+    # 5. So what spécifique à l'entreprise cible (10)
+    if entreprise_cible:
+        entreprise_short = entreprise_cible.split()[0].lower()  # premier mot du nom
+        sw_fields = [(result.get(k) or {}).get("so_what", "") for k in axes_keys]
+        sw_specifiques = sum(1 for sw in sw_fields if sw and entreprise_short in sw.lower())
+        add("So what spécifique à l'entreprise", sw_specifiques >= 2, 10,
+            f"{sw_specifiques}/{len(sw_fields)} so_what mentionnent l'entreprise cible" if sw_specifiques >= 2
+            else f"seulement {sw_specifiques}/{len(sw_fields)} so_what ciblent {entreprise_cible}")
+    else:
+        add("So what spécifique à l'entreprise", True, 10, "entreprise cible non renseignée — contrôle ignoré")
+
+    # 6. Recommandations avec KPI renseignés (10)
+    recos = result.get("recommandations_mission") or []
+    recos_avec_kpi = sum(1 for r in recos if _filled((r or {}).get("kpi"), 10))
+    add("Recommandations avec KPI", bool(recos) and recos_avec_kpi == len(recos), 10,
+        f"{recos_avec_kpi}/{len(recos)} recommandations avec KPI" if recos
+        else "aucune recommandation trouvée")
+
+    total = sum(c["weight"] for c in checks)
+    got = sum(c["weight"] for c in checks if c["passed"])
+    score = round(got / total * 100) if total else 0
+
+    min_score = (settings.get("qa") or {}).get("min_score", DEFAULT_MIN_SCORE)
+    status = "publiable" if score >= min_score else "quarantaine"
+    issues = [f"{c['name']} — {c['detail']}" for c in checks if not c["passed"]]
+
+    logger.info(
+        f"QA mission — score {score}/100 → {status.upper()} "
+        f"({sum(1 for c in checks if c['passed'])}/{len(checks)} contrôles OK)"
+    )
+    return {
+        "score": score,
+        "min_score": min_score,
+        "status": status,
+        "checks": checks,
+        "issues": issues,
+        "evaluated_at": __import__("datetime").datetime.now().isoformat(),
+    }
