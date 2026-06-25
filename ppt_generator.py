@@ -174,7 +174,7 @@ def _add_numbered_circle(slide, left, top, number, size=Cm(0.75),
 #  HELPERS VISUELS RESTRUCTURÉS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _split_to_bullets(text: str, max_items: int = 5, max_chars_per: int = 90) -> List[str]:
+def _split_to_bullets(text: str, max_items: int = 3, max_chars_per: int = 70) -> List[str]:
     """
     Découpe un texte paragraphe en liste de bullets courts.
     Chaque phrase terminée (. ! ?) suivie d'une majuscule = 1 bullet.
@@ -203,7 +203,7 @@ def _split_to_bullets(text: str, max_items: int = 5, max_chars_per: int = 90) ->
 
 def _add_bullet_list_box(slide, left, top, width, height, items: List[str],
                           header_color=None, item_color=GRIS_DARK,
-                          header_size: float = 10, item_size: float = 10,
+                          header_size: float = 12, item_size: float = 12,
                           arrow_color=None):
     """
     Rendu d'une liste à puces structurée.
@@ -234,7 +234,7 @@ def _add_bullet_list_box(slide, left, top, width, height, items: List[str],
 
         if raw.startswith('§'):
             # Sous-titre de section
-            p.space_before = Pt(5)
+            p.space_before = Pt(9)
             run = p.add_run()
             run.text = raw[1:].strip()
             run.font.name = POLICE
@@ -243,7 +243,7 @@ def _add_bullet_list_box(slide, left, top, width, height, items: List[str],
             run.font.color.rgb = header_color
         else:
             # Puce avec flèche colorée
-            p.space_before = Pt(1)
+            p.space_before = Pt(3)
             run_arrow = p.add_run()
             run_arrow.text = "→ "
             run_arrow.font.name = POLICE
